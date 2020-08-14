@@ -64,6 +64,7 @@ class ProjectSettingsEditor : public AcceptDialog {
 	LineEdit *category;
 	LineEdit *property;
 	OptionButton *type;
+	ConfirmationDialog *delete_property_confirmation;
 
 	SectionedInspector *globals_editor;
 
@@ -86,7 +87,7 @@ class ProjectSettingsEditor : public AcceptDialog {
 	void _item_selected(const String &);
 	void _item_adds(String);
 	void _item_add();
-	void _item_del();
+	void _item_del(bool p_confirmed);
 	void _save();
 
 	void _settings_prop_edited(const String &p_name);

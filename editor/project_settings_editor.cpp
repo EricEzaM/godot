@@ -160,7 +160,7 @@ void ProjectSettingsEditor::_item_add() {
 	_settings_changed();
 }
 
-void ProjectSettingsEditor::_item_del() {
+void ProjectSettingsEditor::_item_del(bool p_confirmed) {
 	String path = globals_editor->get_inspector()->get_selected_path();
 	if (path == String()) {
 		EditorNode::get_singleton()->show_warning(TTR("Select a setting item first!"));
@@ -176,6 +176,12 @@ void ProjectSettingsEditor::_item_del() {
 
 	if (ProjectSettings::get_singleton()->get_order(property) < ProjectSettings::NO_BUILTIN_ORDER_BASE) {
 		EditorNode::get_singleton()->show_warning(vformat(TTR("Setting '%s' is internal, and it can't be deleted."), property));
+		return;
+	}
+
+	if (!p_confirmed) {
+		delete_property_confirmation->set_text(vformat(TTR("Are you sure you want to delete property '%s'?"), property));
+		delete_property_confirmation->popup_centered();
 		return;
 	}
 
@@ -433,8 +439,12 @@ ProjectSettingsEditor::ProjectSettingsEditor(EditorData *p_data) {
 
 	Button *del = memnew(Button);
 	del->set_text(TTR("Delete"));
-	del->connect("pressed", callable_mp(this, &ProjectSettingsEditor::_item_del));
+	del->connect("pressed", callable_mp(this, &ProjectSettingsEditor::_item_del), varray(false));
 	hbc->add_child(del);
+
+	delete_property_confirmation = memnew(ConfirmationDialog);
+	add_child(delete_property_confirmation);
+	delete_property_confirmation->connect("confirmed", callable_mp(this, &ProjectSettingsEditor::_item_del), varray(true));
 
 	add_prop_bar->add_child(memnew(VSeparator));
 
