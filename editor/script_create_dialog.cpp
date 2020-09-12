@@ -106,7 +106,13 @@ void ScriptCreateDialog::config(const String &p_base_name, const String &p_base_
 
 	if (p_base_path != "") {
 		initial_bp = p_base_path.get_basename();
-		file_path->set_text(initial_bp + "." + ScriptServer::get_language(language_menu->get_selected())->get_extension());
+		String dir = p_base_path.get_base_dir();
+		String filename = p_base_path.get_file();
+		ScriptLanguage *lang = ScriptServer::get_language(language_menu->get_selected());
+		if (lang->prefers_snake_case_names()) {
+			filename = filename.camelcase_to_underscore();
+		}
+		file_path->set_text(dir.plus_file(filename) + "." + lang->get_extension());
 		current_language = language_menu->get_selected();
 	} else {
 		initial_bp = "";
@@ -355,12 +361,24 @@ void ScriptCreateDialog::_lang_changed(int l) {
 	}
 
 	String selected_ext = "." + language->get_extension();
-	String path = file_path->get_text();
+	String path = initial_bp;
 	String extension = "";
+	String filename = "";
 	if (path != "") {
+		filename = path.get_file();
+
 		if (path.find(".") != -1) {
 			extension = path.get_extension();
+			// Remove the extension and dot from the filename.
+			filename = filename.substr(0, filename.length() - (extension.length() + 1));
 		}
+
+		if (language->prefers_snake_case_names()) {
+			filename = filename.camelcase_to_underscore();
+		}
+
+		// Reconstruct the path with the converted filename.
+		path = path.get_base_dir().plus_file(filename);
 
 		if (extension.length() == 0) {
 			// add extension if none
