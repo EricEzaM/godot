@@ -133,7 +133,7 @@ private:
 
 		bool input;
 		bool unhandled_input;
-		bool unhandled_key_input;
+		bool unhandled_button_input;
 
 		bool parent_owned;
 		bool in_constructor;
@@ -363,8 +363,8 @@ public:
 	void set_process_unhandled_input(bool p_enable);
 	bool is_processing_unhandled_input() const;
 
-	void set_process_unhandled_key_input(bool p_enable);
-	bool is_processing_unhandled_key_input() const;
+	void set_process_unhandled_button_input(bool p_enable);
+	bool is_processing_unhandled_button_input() const;
 
 	Node *duplicate(int p_flags = DUPLICATE_GROUPS | DUPLICATE_SIGNALS | DUPLICATE_SCRIPTS) const;
 	Node *duplicate_and_reown(const Map<Node *, Node *> &p_reown_map) const;

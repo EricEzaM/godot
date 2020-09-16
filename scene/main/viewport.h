@@ -259,8 +259,7 @@ private:
 	StringName input_group;
 	StringName gui_input_group;
 	StringName unhandled_input_group;
-	StringName unhandled_key_input_group;
-	StringName gui_shortcut_input_group;
+	StringName unhandled_button_input_group;
 
 	void _update_listener();
 	void _update_listener_2d();

@@ -468,13 +468,10 @@ void Control::_update_canvas_item_transform() {
 void Control::_notification(int p_notification) {
 	switch (p_notification) {
 		case NOTIFICATION_ENTER_TREE: {
-			if (data.gui_shortcut_input) {
-				add_to_group("_vp_gui_shortcut_input" + itos(get_viewport()->get_instance_id()));
-			}
 		} break;
 		case NOTIFICATION_READY: {
-			if (get_script_instance() && get_script_instance()->has_method(SceneStringNames::get_singleton()->_gui_shortcut_input)) {
-				set_process_gui_shortcut_input(true);
+			if (get_script_instance() && get_script_instance()->has_method(SceneStringNames::get_singleton()->_unhandled_button_input)) {
+				set_process_unhandled_button_input(true);
 			}
 		} break;
 		case NOTIFICATION_POST_ENTER_TREE: {
@@ -482,10 +479,6 @@ void Control::_notification(int p_notification) {
 			_size_changed();
 		} break;
 		case NOTIFICATION_EXIT_TREE: {
-			if (data.gui_shortcut_input) {
-				remove_from_group("_vp_gui_shortcut_input" + itos(get_viewport()->get_instance_id()));
-			}
-
 			get_viewport()->_gui_remove_control(this);
 
 		} break;
@@ -2121,32 +2114,24 @@ void Control::set_theme(const Ref<Theme> &p_theme) {
 	}
 }
 
-void Control::set_process_gui_shortcut_input(bool p_enable) {
-	if (p_enable == data.gui_shortcut_input) {
-		return;
-	}
-	data.gui_shortcut_input = p_enable;
-	if (!is_inside_tree()) {
-		return;
-	}
-
-	if (p_enable) {
-		add_to_group("_vp_gui_shortcut_input" + itos(get_viewport()->get_instance_id()));
-	} else {
-		remove_from_group("_vp_gui_shortcut_input" + itos(get_viewport()->get_instance_id()));
-	}
-}
-
-bool Control::is_processing_gui_shortcut_input() const {
-	return data.gui_shortcut_input;
-}
-
 void Control::set_shortcut_context(ObjectID p_node) {
 	data.shortcut_context = p_node;
 }
 
 ObjectID Control::get_shortcut_context() const {
 	return data.shortcut_context;
+}
+
+bool Control::is_focus_owner_in_shorcut_context() const {
+	if (data.shortcut_context == ObjectID()) {
+		// No context, therefore global - always "in" context.
+		return true;
+	}
+
+	Object *ctx_obj = ObjectDB::get_instance(data.shortcut_context);
+	Node *ctx_node = Object::cast_to<Node>(ctx_obj);
+	Control *vp_focus = get_focus_owner();
+	return ctx_node && (ctx_node->is_a_parent_of(vp_focus) || ctx_node == vp_focus);
 }
 
 void Control::accept_event() {
@@ -2644,8 +2629,8 @@ void Control::_bind_methods() {
 	//ClassDB::bind_method(D_METHOD("_window_resize_event"),&Control::_window_resize_event);
 	ClassDB::bind_method(D_METHOD("_update_minimum_size"), &Control::_update_minimum_size);
 
-	ClassDB::bind_method(D_METHOD("set_process_gui_shortcut_input", "enable"), &Control::set_process_gui_shortcut_input);
-	ClassDB::bind_method(D_METHOD("is_processing_gui_shortcut_input"), &Control::is_processing_gui_shortcut_input);
+	ClassDB::bind_method(D_METHOD("set_process_unhandled_button_input", "enable"), &Control::set_process_unhandled_button_input);
+	ClassDB::bind_method(D_METHOD("is_processing_unhandled_button_input"), &Control::is_processing_unhandled_button_input);
 	ClassDB::bind_method(D_METHOD("set_shortcut_context", "object_id"), &Control::set_shortcut_context);
 	ClassDB::bind_method(D_METHOD("get_shortcut_context"), &Control::get_shortcut_context);
 	ClassDB::bind_method(D_METHOD("accept_event"), &Control::accept_event);
@@ -2774,7 +2759,7 @@ void Control::_bind_methods() {
 	ClassDB::bind_method(D_METHOD("minimum_size_changed"), &Control::minimum_size_changed);
 
 	BIND_VMETHOD(MethodInfo("_gui_input", PropertyInfo(Variant::OBJECT, "event", PROPERTY_HINT_RESOURCE_TYPE, "InputEvent")));
-	BIND_VMETHOD(MethodInfo("_gui_shortcut_input", PropertyInfo(Variant::OBJECT, "event", PROPERTY_HINT_RESOURCE_TYPE, "InputEvent")));
+	BIND_VMETHOD(MethodInfo("_unhandled_button_input", PropertyInfo(Variant::OBJECT, "event", PROPERTY_HINT_RESOURCE_TYPE, "InputEvent")));
 	BIND_VMETHOD(MethodInfo(Variant::VECTOR2, "_get_minimum_size"));
 
 	MethodInfo get_drag_data = MethodInfo("get_drag_data", PropertyInfo(Variant::VECTOR2, "position"));
@@ -2942,7 +2927,6 @@ Control::Control() {
 	data.minimum_size_valid = false;
 	data.updating_last_minimum_size = false;
 
-	data.gui_shortcut_input = false;
 	data.shortcut_context = ObjectID();
 
 	data.clip_contents = false;

@@ -85,8 +85,8 @@ void Node::_notification(int p_notification) {
 			if (data.unhandled_input) {
 				add_to_group("_vp_unhandled_input" + itos(get_viewport()->get_instance_id()));
 			}
-			if (data.unhandled_key_input) {
-				add_to_group("_vp_unhandled_key_input" + itos(get_viewport()->get_instance_id()));
+			if (data.unhandled_button_input) {
+				add_to_group("_vp_unhandled_button_input" + itos(get_viewport()->get_instance_id()));
 			}
 
 			get_tree()->node_count++;
@@ -106,8 +106,8 @@ void Node::_notification(int p_notification) {
 			if (data.unhandled_input) {
 				remove_from_group("_vp_unhandled_input" + itos(get_viewport()->get_instance_id()));
 			}
-			if (data.unhandled_key_input) {
-				remove_from_group("_vp_unhandled_key_input" + itos(get_viewport()->get_instance_id()));
+			if (data.unhandled_button_input) {
+				remove_from_group("_vp_unhandled_button_input" + itos(get_viewport()->get_instance_id()));
 			}
 
 			data.pause_owner = nullptr;
@@ -132,8 +132,8 @@ void Node::_notification(int p_notification) {
 					set_process_unhandled_input(true);
 				}
 
-				if (get_script_instance()->has_method(SceneStringNames::get_singleton()->_unhandled_key_input)) {
-					set_process_unhandled_key_input(true);
+				if (get_script_instance()->has_method(SceneStringNames::get_singleton()->_unhandled_button_input)) {
+					set_process_unhandled_button_input(true);
 				}
 
 				if (get_script_instance()->has_method(SceneStringNames::get_singleton()->_process)) {
@@ -961,24 +961,24 @@ bool Node::is_processing_unhandled_input() const {
 	return data.unhandled_input;
 }
 
-void Node::set_process_unhandled_key_input(bool p_enable) {
-	if (p_enable == data.unhandled_key_input) {
+void Node::set_process_unhandled_button_input(bool p_enable) {
+	if (p_enable == data.unhandled_button_input) {
 		return;
 	}
-	data.unhandled_key_input = p_enable;
+	data.unhandled_button_input = p_enable;
 	if (!is_inside_tree()) {
 		return;
 	}
 
 	if (p_enable) {
-		add_to_group("_vp_unhandled_key_input" + itos(get_viewport()->get_instance_id()));
+		add_to_group("_vp_unhandled_button_input" + itos(get_viewport()->get_instance_id()));
 	} else {
-		remove_from_group("_vp_unhandled_key_input" + itos(get_viewport()->get_instance_id()));
+		remove_from_group("_vp_unhandled_button_input" + itos(get_viewport()->get_instance_id()));
 	}
 }
 
-bool Node::is_processing_unhandled_key_input() const {
-	return data.unhandled_key_input;
+bool Node::is_processing_unhandled_button_input() const {
+	return data.unhandled_button_input;
 }
 
 StringName Node::get_name() const {
@@ -2765,8 +2765,8 @@ void Node::_bind_methods() {
 	ClassDB::bind_method(D_METHOD("is_processing_input"), &Node::is_processing_input);
 	ClassDB::bind_method(D_METHOD("set_process_unhandled_input", "enable"), &Node::set_process_unhandled_input);
 	ClassDB::bind_method(D_METHOD("is_processing_unhandled_input"), &Node::is_processing_unhandled_input);
-	ClassDB::bind_method(D_METHOD("set_process_unhandled_key_input", "enable"), &Node::set_process_unhandled_key_input);
-	ClassDB::bind_method(D_METHOD("is_processing_unhandled_key_input"), &Node::is_processing_unhandled_key_input);
+	ClassDB::bind_method(D_METHOD("set_process_unhandled_button_input", "enable"), &Node::set_process_unhandled_button_input);
+	ClassDB::bind_method(D_METHOD("is_processing_unhandled_button_input"), &Node::is_processing_unhandled_button_input);
 	ClassDB::bind_method(D_METHOD("set_pause_mode", "mode"), &Node::set_pause_mode);
 	ClassDB::bind_method(D_METHOD("get_pause_mode"), &Node::get_pause_mode);
 	ClassDB::bind_method(D_METHOD("can_process"), &Node::can_process);
@@ -2906,7 +2906,7 @@ void Node::_bind_methods() {
 	BIND_VMETHOD(MethodInfo("_ready"));
 	BIND_VMETHOD(MethodInfo("_input", PropertyInfo(Variant::OBJECT, "event", PROPERTY_HINT_RESOURCE_TYPE, "InputEvent")));
 	BIND_VMETHOD(MethodInfo("_unhandled_input", PropertyInfo(Variant::OBJECT, "event", PROPERTY_HINT_RESOURCE_TYPE, "InputEvent")));
-	BIND_VMETHOD(MethodInfo("_unhandled_key_input", PropertyInfo(Variant::OBJECT, "event", PROPERTY_HINT_RESOURCE_TYPE, "InputEventKey")));
+	BIND_VMETHOD(MethodInfo("_unhandled_button_input", PropertyInfo(Variant::OBJECT, "event", PROPERTY_HINT_RESOURCE_TYPE, "InputEventKey")));
 	BIND_VMETHOD(MethodInfo(Variant::STRING, "_get_configuration_warning"));
 }
 
@@ -2942,7 +2942,7 @@ Node::Node() {
 	data.OW = nullptr;
 	data.input = false;
 	data.unhandled_input = false;
-	data.unhandled_key_input = false;
+	data.unhandled_button_input = false;
 	data.pause_mode = PAUSE_MODE_INHERIT;
 	data.pause_owner = nullptr;
 	data.network_master = 1; //server by default

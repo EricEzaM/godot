@@ -5787,7 +5787,11 @@ void Node3DEditor::snap_selected_nodes_to_floor() {
 	}
 }
 
-void Node3DEditor::_unhandled_key_input(Ref<InputEvent> p_event) {
+void Node3DEditor::_unhandled_button_input(Ref<InputEvent> p_event) {
+	if (!is_focus_owner_in_shorcut_context()) {
+		return;
+	}
+
 	if (!is_visible_in_tree()) {
 		return;
 	}
@@ -6004,7 +6008,7 @@ void Node3DEditor::_register_all_gizmos() {
 }
 
 void Node3DEditor::_bind_methods() {
-	ClassDB::bind_method("_unhandled_key_input", &Node3DEditor::_unhandled_key_input);
+	ClassDB::bind_method("_unhandled_button_input", &Node3DEditor::_unhandled_button_input);
 	ClassDB::bind_method("_get_editor_data", &Node3DEditor::_get_editor_data);
 	ClassDB::bind_method("_request_gizmo", &Node3DEditor::_request_gizmo);
 	ClassDB::bind_method("_refresh_menu_icons", &Node3DEditor::_refresh_menu_icons);
@@ -6396,7 +6400,7 @@ Node3DEditor::Node3DEditor(EditorNode *p_editor) {
 
 	selected = nullptr;
 
-	set_process_unhandled_key_input(true);
+	set_process_unhandled_button_input(true);
 	add_to_group("_spatial_editor_group");
 
 	EDITOR_DEF("editors/3d/manipulator_gizmo_size", 80);

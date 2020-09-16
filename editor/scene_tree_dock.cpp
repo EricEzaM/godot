@@ -71,7 +71,11 @@ void SceneTreeDock::_input(Ref<InputEvent> p_event) {
 	}
 }
 
-void SceneTreeDock::_gui_shortcut_input(Ref<InputEvent> p_event) {
+void SceneTreeDock::_unhandled_button_input(Ref<InputEvent> p_event) {
+	if (!is_focus_owner_in_shorcut_context()) {
+		return;
+	}
+
 	if (get_focus_owner() && get_focus_owner()->is_text_field()) {
 		return;
 	}
@@ -2780,7 +2784,7 @@ void SceneTreeDock::_feature_profile_changed() {
 
 void SceneTreeDock::_bind_methods() {
 	ClassDB::bind_method(D_METHOD("_set_owners"), &SceneTreeDock::_set_owners);
-	ClassDB::bind_method(D_METHOD("_gui_shortcut_input"), &SceneTreeDock::_gui_shortcut_input);
+	ClassDB::bind_method(D_METHOD("_unhandled_button_input"), &SceneTreeDock::_unhandled_button_input);
 	ClassDB::bind_method(D_METHOD("_input"), &SceneTreeDock::_input);
 	ClassDB::bind_method(D_METHOD("_update_script_button"), &SceneTreeDock::_update_script_button);
 
@@ -2937,7 +2941,7 @@ SceneTreeDock::SceneTreeDock(EditorNode *p_editor, Node *p_scene_root, EditorSel
 
 	// Process shortcuts directly rather than via a MenuButton.
 	// We want these shortcuts to be global so they are available in the CanvasItemEditor and SpatialEditor. Thus, no shortcut context is set.
-	set_process_gui_shortcut_input(true);
+	set_process_unhandled_button_input(true);
 
 	delete_dialog = memnew(ConfirmationDialog);
 	add_child(delete_dialog);

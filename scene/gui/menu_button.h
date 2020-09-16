@@ -50,7 +50,7 @@ class MenuButton : public Button {
 protected:
 	void _notification(int p_what);
 	static void _bind_methods();
-	virtual void _gui_shortcut_input(Ref<InputEvent> p_event) override;
+	virtual void _unhandled_button_input(Ref<InputEvent> p_event) override;
 
 public:
 	virtual void pressed() override;

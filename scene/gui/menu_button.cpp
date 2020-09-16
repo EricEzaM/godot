@@ -33,7 +33,11 @@
 #include "core/os/keyboard.h"
 #include "scene/main/window.h"
 
-void MenuButton::_gui_shortcut_input(Ref<InputEvent> p_event) {
+void MenuButton::_unhandled_button_input(Ref<InputEvent> p_event) {
+	if (!is_focus_owner_in_shorcut_context()) {
+		return;
+	}
+
 	if (disable_shortcuts) {
 		return;
 	}
@@ -105,7 +109,7 @@ void MenuButton::_notification(int p_what) {
 
 void MenuButton::_bind_methods() {
 	ClassDB::bind_method(D_METHOD("get_popup"), &MenuButton::get_popup);
-	ClassDB::bind_method(D_METHOD("_gui_shortcut_input"), &MenuButton::_gui_shortcut_input);
+	ClassDB::bind_method(D_METHOD("_unhandled_button_input"), &MenuButton::_unhandled_button_input);
 	ClassDB::bind_method(D_METHOD("_set_items"), &MenuButton::_set_items);
 	ClassDB::bind_method(D_METHOD("_get_items"), &MenuButton::_get_items);
 	ClassDB::bind_method(D_METHOD("set_switch_on_hover", "enable"), &MenuButton::set_switch_on_hover);
@@ -127,7 +131,7 @@ MenuButton::MenuButton() {
 	set_flat(true);
 	set_toggle_mode(true);
 	set_disable_shortcuts(false);
-	set_process_gui_shortcut_input(true);
+	set_process_unhandled_button_input(true);
 	set_enabled_focus_mode(FOCUS_NONE);
 	set_action_mode(ACTION_MODE_BUTTON_PRESS);
 

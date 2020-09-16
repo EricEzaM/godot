@@ -1200,7 +1200,11 @@ void AnimationPlayerEditor::_onion_skinning_menu(int p_option) {
 	}
 }
 
-void AnimationPlayerEditor::_gui_shortcut_input(const Ref<InputEvent> &p_ev) {
+void AnimationPlayerEditor::_unhandled_button_input(const Ref<InputEvent> &p_ev) {
+	if (!is_focus_owner_in_shorcut_context()) {
+		return;
+	}
+
 	Ref<InputEventKey> k = p_ev;
 	if (is_visible_in_tree() && k.is_valid() && k->is_pressed() && !k->is_echo() && !k->get_alt() && !k->get_control() && !k->get_metakey()) {
 		switch (k->get_keycode()) {
@@ -1473,7 +1477,7 @@ void AnimationPlayerEditor::_bind_methods() {
 	ClassDB::bind_method(D_METHOD("_animation_player_changed"), &AnimationPlayerEditor::_animation_player_changed);
 	ClassDB::bind_method(D_METHOD("_list_changed"), &AnimationPlayerEditor::_list_changed);
 	ClassDB::bind_method(D_METHOD("_animation_duplicate"), &AnimationPlayerEditor::_animation_duplicate);
-	ClassDB::bind_method(D_METHOD("_gui_shortcut_input"), &AnimationPlayerEditor::_gui_shortcut_input);
+	ClassDB::bind_method(D_METHOD("_unhandled_button_input"), &AnimationPlayerEditor::_unhandled_button_input);
 
 	ClassDB::bind_method(D_METHOD("_prepare_onion_layers_1"), &AnimationPlayerEditor::_prepare_onion_layers_1);
 	ClassDB::bind_method(D_METHOD("_prepare_onion_layers_2"), &AnimationPlayerEditor::_prepare_onion_layers_2);
@@ -1680,7 +1684,7 @@ AnimationPlayerEditor::AnimationPlayerEditor(EditorNode *p_editor, AnimationPlay
 	last_active = false;
 	timeline_position = 0;
 
-	set_process_gui_shortcut_input(true);
+	set_process_unhandled_button_input(true);
 	set_shortcut_context(get_instance_id());
 
 	add_child(track_editor);

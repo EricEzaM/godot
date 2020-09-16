@@ -471,7 +471,10 @@ float CanvasItemEditor::snap_angle(float p_target, float p_start) const {
 	}
 }
 
-void CanvasItemEditor::_gui_shortcut_input(const Ref<InputEvent> &p_ev) {
+void CanvasItemEditor::_unhandled_button_input(const Ref<InputEvent> &p_ev) {
+	if (!is_focus_owner_in_shorcut_context()) {
+		return;
+	}
 	Ref<InputEventKey> k = p_ev;
 
 	if (!is_visible_in_tree()) {
@@ -5213,7 +5216,7 @@ void CanvasItemEditor::_focus_selection(int p_op) {
 void CanvasItemEditor::_bind_methods() {
 	ClassDB::bind_method(D_METHOD("_update_override_camera_button", "game_running"), &CanvasItemEditor::_update_override_camera_button);
 	ClassDB::bind_method("_get_editor_data", &CanvasItemEditor::_get_editor_data);
-	ClassDB::bind_method("_gui_shortcut_input", &CanvasItemEditor::_gui_shortcut_input);
+	ClassDB::bind_method("_unhandled_button_input", &CanvasItemEditor::_unhandled_button_input);
 	ClassDB::bind_method("_queue_update_bone_list", &CanvasItemEditor::_update_bone_list);
 	ClassDB::bind_method("_update_bone_list", &CanvasItemEditor::_update_bone_list);
 	ClassDB::bind_method(D_METHOD("set_state"), &CanvasItemEditor::set_state);
@@ -5961,7 +5964,7 @@ CanvasItemEditor::CanvasItemEditor(EditorNode *p_editor) {
 	skeleton_menu->get_popup()->set_item_checked(skeleton_menu->get_popup()->get_item_index(SKELETON_SHOW_BONES), true);
 	singleton = this;
 
-	set_process_gui_shortcut_input(true);
+	set_process_unhandled_button_input(true);
 
 	// Update the menus' checkboxes
 	call_deferred("set_state", get_state());

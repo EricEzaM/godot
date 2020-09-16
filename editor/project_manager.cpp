@@ -1823,7 +1823,7 @@ void ProjectManager::_notification(int p_what) {
 			}
 		} break;
 		case NOTIFICATION_VISIBILITY_CHANGED: {
-			set_process_gui_shortcut_input(is_visible_in_tree());
+			set_process_unhandled_button_input(is_visible_in_tree());
 		} break;
 		case NOTIFICATION_WM_CLOSE_REQUEST: {
 			_dim_window();
@@ -1862,7 +1862,11 @@ void ProjectManager::_update_project_buttons() {
 	erase_missing_btn->set_disabled(!_project_list->is_any_project_missing());
 }
 
-void ProjectManager::_gui_shortcut_input(const Ref<InputEvent> &p_ev) {
+void ProjectManager::_unhandled_button_input(const Ref<InputEvent> &p_ev) {
+	if (!is_focus_owner_in_shorcut_context()) {
+		return;
+	}
+
 	Ref<InputEventKey> k = p_ev;
 
 	if (k.is_valid()) {
@@ -2325,7 +2329,7 @@ void ProjectManager::_on_search_term_changed(const String &p_term) {
 
 void ProjectManager::_bind_methods() {
 	ClassDB::bind_method("_exit_dialog", &ProjectManager::_exit_dialog);
-	ClassDB::bind_method("_gui_shortcut_input", &ProjectManager::_gui_shortcut_input);
+	ClassDB::bind_method("_unhandled_button_input", &ProjectManager::_unhandled_button_input);
 	ClassDB::bind_method("_update_project_buttons", &ProjectManager::_update_project_buttons);
 }
 

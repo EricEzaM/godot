@@ -2101,14 +2101,8 @@ void VisualScriptInstance::create(const Ref<VisualScript> &p_script, Object *p_o
 		if (p_script->functions.has("_unhandled_input")) {
 			node->set_process_unhandled_input(true);
 		}
-		if (p_script->functions.has("_unhandled_key_input")) {
-			node->set_process_unhandled_key_input(true);
-		}
-		if (p_script->functions.has("_gui_shortcut_input")) {
-			Control *c = Object::cast_to<Control>(node);
-			if (c) {
-				c->set_process_gui_shortcut_input(true);
-			}
+		if (p_script->functions.has("_unhandled_button_input")) {
+			node->set_process_unhandled_button_input(true);
 		}
 	}
 

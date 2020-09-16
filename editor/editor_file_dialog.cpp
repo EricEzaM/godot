@@ -292,7 +292,6 @@ void EditorFileDialog::_post_popup() {
 		_update_favorites();
 	}
 
-	// Need to use unhandled input since the Dialog is not a control and doesn't have _gui_shortcut_input.
 	set_process_unhandled_input(true);
 }
 
