@@ -582,6 +582,7 @@ ShaderEditor::ShaderEditor(EditorNode *p_node) {
 	HBoxContainer *hbc = memnew(HBoxContainer);
 
 	edit_menu = memnew(MenuButton);
+	edit_menu->set_shortcut_context(get_instance_id());
 	edit_menu->set_text(TTR("Edit"));
 	edit_menu->set_switch_on_hover(true);
 
@@ -606,6 +607,7 @@ ShaderEditor::ShaderEditor(EditorNode *p_node) {
 	edit_menu->get_popup()->connect("id_pressed", callable_mp(this, &ShaderEditor::_menu_option));
 
 	search_menu = memnew(MenuButton);
+	search_menu->set_shortcut_context(get_instance_id());
 	search_menu->set_text(TTR("Search"));
 	search_menu->set_switch_on_hover(true);
 
@@ -616,6 +618,7 @@ ShaderEditor::ShaderEditor(EditorNode *p_node) {
 	search_menu->get_popup()->connect("id_pressed", callable_mp(this, &ShaderEditor::_menu_option));
 
 	MenuButton *goto_menu = memnew(MenuButton);
+	goto_menu->set_shortcut_context(get_instance_id());
 	goto_menu->set_text(TTR("Go To"));
 	goto_menu->set_switch_on_hover(true);
 	goto_menu->get_popup()->connect("id_pressed", callable_mp(this, &ShaderEditor::_menu_option));
