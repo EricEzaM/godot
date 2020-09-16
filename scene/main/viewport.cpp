@@ -1782,15 +1782,7 @@ bool Viewport::_gui_drop(Control *p_at_control, Point2 p_at_pos, bool p_just_che
 void Viewport::_gui_input_event(Ref<InputEvent> p_event) {
 	ERR_FAIL_COND(p_event.is_null());
 
-	//?
-	/*
-	if (!is_visible()) {
-		return; //simple and plain
-	}
-	*/
-
 	Ref<InputEventMouseButton> mb = p_event;
-
 	if (mb.is_valid()) {
 		gui.key_event_accepted = false;
 
@@ -1953,7 +1945,6 @@ void Viewport::_gui_input_event(Ref<InputEvent> p_event) {
 	}
 
 	Ref<InputEventMouseMotion> mm = p_event;
-
 	if (mm.is_valid()) {
 		gui.key_event_accepted = false;
 		Point2 mpos = mm->get_position();
@@ -2369,6 +2360,37 @@ void Viewport::_gui_input_event(Ref<InputEvent> p_event) {
 			if (next) {
 				next->grab_focus();
 				set_input_as_handled();
+			}
+		}
+	}
+
+	// GUI Shortcut input - only keys, mouse buttons and joypad buttons - only called on controls.
+	if (Object::cast_to<InputEventKey>(*p_event) || Object::cast_to<InputEventMouseButton>(*p_event) || Object::cast_to<InputEventJoypadButton>(*p_event)) {
+		List<Node *> nodes;
+		get_tree()->get_nodes_in_group(gui_shortcut_input_group, &nodes);
+
+		Array args;
+		args.push_back(p_event);
+
+		for (List<Node *>::Element *E = nodes.front(); E; E = E->next()) {
+			// GUI Shortcuts only work on Controls.
+			Control *c = Object::cast_to<Control>(E->get());
+			if (!c) {
+				continue;
+			}
+
+			ObjectID sc_context = c->get_shortcut_context();
+			Object *context_obj = ObjectDB::get_instance(sc_context);
+
+			if (!context_obj) {
+				// If no context, shortcut is global - so call it.
+				c->callv("_gui_shortcut_input", args);
+			} else {
+				// If there is a context, check if the context is a parent of the current focus owner. If it is, shortcut is allowed.
+				Node *context_node = Object::cast_to<Node>(context_obj);
+				if (context_node && context_node->is_a_parent_of(_gui_get_focus_owner())) {
+					c->callv("_gui_shortcut_input", args);
+				}
 			}
 		}
 	}
@@ -2996,37 +3018,6 @@ void Viewport::unhandled_input(const Ref<InputEvent> &p_event, bool p_local_coor
 		ev = _make_input_local(p_event);
 	} else {
 		ev = p_event;
-	}
-
-	// GUI Shortcut input - only keys, mouse buttons and joypad buttons - only called on controls.
-	if (Object::cast_to<InputEventKey>(*ev) || Object::cast_to<InputEventMouseButton>(*ev) || Object::cast_to<InputEventJoypadButton>(*ev)) {
-		List<Node *> nodes;
-		get_tree()->get_nodes_in_group(gui_shortcut_input_group, &nodes);
-
-		Array args;
-		args.push_back(ev);
-
-		for (List<Node *>::Element *E = nodes.front(); E; E = E->next()) {
-			// GUI Shortcuts only work on Controls.
-			Control *c = Object::cast_to<Control>(E->get());
-			if (!c) {
-				continue;
-			}
-
-			ObjectID sc_context = c->get_shortcut_context();
-			Object *context_obj = ObjectDB::get_instance(sc_context);
-
-			if (!context_obj) {
-				// If no context, shortcut is global - so call it.
-				c->callv("_gui_shortcut_input", args);
-			} else {
-				// If there is a context, check if the context is a parent of the current focus owner. If it is, shortcut is allowed.
-				Node *context_node = Object::cast_to<Node>(context_obj);
-				if (context_node && context_node->is_a_parent_of(_gui_get_focus_owner())) {
-					c->callv("_gui_shortcut_input", args);
-				}
-			}
-		}
 	}
 
 	// Unhandled Input
