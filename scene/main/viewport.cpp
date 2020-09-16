@@ -2998,7 +2998,41 @@ void Viewport::unhandled_input(const Ref<InputEvent> &p_event, bool p_local_coor
 		ev = p_event;
 	}
 
+	// GUI Shortcut input - only keys, mouse buttons and joypad buttons - only called on controls.
+	if (Object::cast_to<InputEventKey>(*ev) || Object::cast_to<InputEventMouseButton>(*ev) || Object::cast_to<InputEventJoypadButton>(*ev)) {
+		List<Node *> nodes;
+		get_tree()->get_nodes_in_group(gui_shortcut_input_group, &nodes);
+
+		Array args;
+		args.push_back(ev);
+
+		for (List<Node *>::Element *E = nodes.front(); E; E = E->next()) {
+			// GUI Shortcuts only work on Controls.
+			Control *c = Object::cast_to<Control>(E->get());
+			if (!c) {
+				continue;
+			}
+
+			ObjectID sc_context = c->get_shortcut_context();
+			Object *context_obj = ObjectDB::get_instance(sc_context);
+
+			if (!context_obj) {
+				// If no context, shortcut is global - so call it.
+				c->callv("_gui_shortcut_input", args);
+			} else {
+				// If there is a context, check if the context is a parent of the current focus owner. If it is, shortcut is allowed.
+				Node *context_node = Object::cast_to<Node>(context_obj);
+				if (context_node && context_node->is_a_parent_of(_gui_get_focus_owner())) {
+					c->callv("_gui_shortcut_input", args);
+				}
+			}
+		}
+	}
+
+	// Unhandled Input
 	get_tree()->_call_input_pause(unhandled_input_group, "_unhandled_input", ev, this);
+
+	// Unhandled Key Input - used for performance reasons - This is called a lot less then _unhandled_input since it ignores MouseMotion, etc
 	if (!is_input_handled() && Object::cast_to<InputEventKey>(*ev) != nullptr) {
 		get_tree()->_call_input_pause(unhandled_key_input_group, "_unhandled_key_input", ev, this);
 	}
@@ -3519,6 +3553,7 @@ Viewport::Viewport() {
 	gui_input_group = "_vp_gui_input" + id;
 	unhandled_input_group = "_vp_unhandled_input" + id;
 	unhandled_key_input_group = "_vp_unhandled_key_input" + id;
+	gui_shortcut_input_group = "_vp_gui_shortcut_input" + id;
 
 	disable_input = false;
 

@@ -468,12 +468,24 @@ void Control::_update_canvas_item_transform() {
 void Control::_notification(int p_notification) {
 	switch (p_notification) {
 		case NOTIFICATION_ENTER_TREE: {
+			if (data.gui_shortcut_input) {
+				add_to_group("_vp_gui_shortcut_input" + itos(get_viewport()->get_instance_id()));
+			}
+		} break;
+		case NOTIFICATION_READY: {
+			if (get_script_instance() && get_script_instance()->has_method(SceneStringNames::get_singleton()->_gui_shortcut_input)) {
+				set_process_gui_shortcut_input(true);
+			}
 		} break;
 		case NOTIFICATION_POST_ENTER_TREE: {
 			data.minimum_size_valid = false;
 			_size_changed();
 		} break;
 		case NOTIFICATION_EXIT_TREE: {
+			if (data.gui_shortcut_input) {
+				remove_from_group("_vp_gui_shortcut_input" + itos(get_viewport()->get_instance_id()));
+			}
+
 			get_viewport()->_gui_remove_control(this);
 
 		} break;
@@ -2109,6 +2121,34 @@ void Control::set_theme(const Ref<Theme> &p_theme) {
 	}
 }
 
+void Control::set_process_gui_shortcut_input(bool p_enable) {
+	if (p_enable == data.gui_shortcut_input) {
+		return;
+	}
+	data.gui_shortcut_input = p_enable;
+	if (!is_inside_tree()) {
+		return;
+	}
+
+	if (p_enable) {
+		add_to_group("_vp_gui_shortcut_input" + itos(get_viewport()->get_instance_id()));
+	} else {
+		remove_from_group("_vp_gui_shortcut_input" + itos(get_viewport()->get_instance_id()));
+	}
+}
+
+bool Control::is_processing_gui_shortcut_input() const {
+	return data.gui_shortcut_input;
+}
+
+void Control::set_shortcut_context(ObjectID p_node) {
+	data.shortcut_context = p_node;
+}
+
+ObjectID Control::get_shortcut_context() const {
+	return data.shortcut_context;
+}
+
 void Control::accept_event() {
 	if (is_inside_tree()) {
 		get_viewport()->_gui_accept_event();
@@ -2896,6 +2936,9 @@ Control::Control() {
 	data.v_grow = GROW_DIRECTION_END;
 	data.minimum_size_valid = false;
 	data.updating_last_minimum_size = false;
+
+	data.gui_shortcut_input = false;
+	data.shortcut_context = ObjectID();
 
 	data.clip_contents = false;
 	for (int i = 0; i < 4; i++) {
