@@ -2366,8 +2366,11 @@ void Viewport::_gui_input_event(Ref<InputEvent> p_event) {
 
 	// GUI Shortcut input - only keys, mouse buttons and joypad buttons - only called on controls.
 	if (Object::cast_to<InputEventKey>(*p_event) || Object::cast_to<InputEventMouseButton>(*p_event) || Object::cast_to<InputEventJoypadButton>(*p_event)) {
+		// Get node list and sort it such that methods are called from bottom to top.
 		List<Node *> nodes;
 		get_tree()->get_nodes_in_group(gui_shortcut_input_group, &nodes);
+		nodes.sort_custom<Node::Comparator>();
+		nodes.invert();
 
 		Array args;
 		args.push_back(p_event);
@@ -2388,9 +2391,13 @@ void Viewport::_gui_input_event(Ref<InputEvent> p_event) {
 			} else {
 				// If there is a context, check if the context is a parent of the current focus owner. If it is, shortcut is allowed.
 				Node *context_node = Object::cast_to<Node>(context_obj);
-				if (context_node && context_node->is_a_parent_of(_gui_get_focus_owner())) {
+				if (context_node && (context_node->is_a_parent_of(_gui_get_focus_owner()) || _gui_get_focus_owner() == context_node)) {
 					c->callv("_gui_shortcut_input", args);
 				}
+			}
+
+			if (is_input_handled()) {
+				break;
 			}
 		}
 	}
