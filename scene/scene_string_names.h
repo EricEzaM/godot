@@ -64,6 +64,7 @@ public:
 	StringName _input_event;
 	StringName gui_input;
 	StringName _gui_input;
+	StringName _gui_shortcut_input;
 	StringName item_rect_changed;
 	StringName shader;
 	StringName shader_unshaded;

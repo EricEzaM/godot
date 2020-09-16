@@ -196,6 +196,9 @@ private:
 		HashMap<StringName, Color> color_override;
 		HashMap<StringName, int> constant_override;
 
+		ObjectID shortcut_context;
+		bool gui_shortcut_input;
+
 	} data;
 
 	// used internally
@@ -384,6 +387,12 @@ public:
 
 	void set_theme(const Ref<Theme> &p_theme);
 	Ref<Theme> get_theme() const;
+
+	void set_process_gui_shortcut_input(bool p_enable);
+	bool is_processing_gui_shortcut_input() const;
+
+	void set_shortcut_context(ObjectID p_node);
+	ObjectID get_shortcut_context() const;
 
 	void set_h_size_flags(int p_flags);
 	int get_h_size_flags() const;
