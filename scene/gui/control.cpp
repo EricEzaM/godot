@@ -2644,6 +2644,10 @@ void Control::_bind_methods() {
 	//ClassDB::bind_method(D_METHOD("_window_resize_event"),&Control::_window_resize_event);
 	ClassDB::bind_method(D_METHOD("_update_minimum_size"), &Control::_update_minimum_size);
 
+	ClassDB::bind_method(D_METHOD("set_process_gui_shortcut_input", "enable"), &Control::set_process_gui_shortcut_input);
+	ClassDB::bind_method(D_METHOD("is_processing_gui_shortcut_input"), &Control::is_processing_gui_shortcut_input);
+	ClassDB::bind_method(D_METHOD("set_shortcut_context", "object_id"), &Control::set_shortcut_context);
+	ClassDB::bind_method(D_METHOD("get_shortcut_context"), &Control::get_shortcut_context);
 	ClassDB::bind_method(D_METHOD("accept_event"), &Control::accept_event);
 	ClassDB::bind_method(D_METHOD("get_minimum_size"), &Control::get_minimum_size);
 	ClassDB::bind_method(D_METHOD("get_combined_minimum_size"), &Control::get_combined_minimum_size);
