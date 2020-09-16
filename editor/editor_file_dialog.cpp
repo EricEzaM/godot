@@ -114,7 +114,7 @@ void EditorFileDialog::_notification(int p_what) {
 	}
 }
 
-void EditorFileDialog::_unhandled_input(const Ref<InputEvent> &p_event) {
+void EditorFileDialog::_unhandled_key_input(const Ref<InputEvent> &p_event) {
 	Ref<InputEventKey> k = p_event;
 
 	if (k.is_valid()) {
@@ -292,7 +292,8 @@ void EditorFileDialog::_post_popup() {
 		_update_favorites();
 	}
 
-	set_process_unhandled_input(true);
+	// Need to use unhandled key input since the Dialog is not a control and doesn't have _gui_shortcut_input.
+	set_process_unhandled_key_input(true);
 }
 
 void EditorFileDialog::_thumbnail_result(const String &p_path, const Ref<Texture2D> &p_preview, const Ref<Texture2D> &p_small_preview, const Variant &p_udata) {
@@ -1326,7 +1327,7 @@ EditorFileDialog::DisplayMode EditorFileDialog::get_display_mode() const {
 }
 
 void EditorFileDialog::_bind_methods() {
-	ClassDB::bind_method(D_METHOD("_unhandled_input"), &EditorFileDialog::_unhandled_input);
+	ClassDB::bind_method(D_METHOD("_unhandled_key_input"), &EditorFileDialog::_unhandled_key_input);
 
 	ClassDB::bind_method(D_METHOD("_cancel_pressed"), &EditorFileDialog::_cancel_pressed);
 

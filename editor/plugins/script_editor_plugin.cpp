@@ -3295,9 +3295,10 @@ ScriptEditor::ScriptEditor(EditorNode *p_editor) {
 	set_process_unhandled_input(true);
 
 	file_menu = memnew(MenuButton);
-	menu_hb->add_child(file_menu);
 	file_menu->set_text(TTR("File"));
 	file_menu->set_switch_on_hover(true);
+	file_menu->set_shortcut_context(get_instance_id());
+	menu_hb->add_child(file_menu);
 
 	file_menu->get_popup()->add_shortcut(ED_SHORTCUT("script_editor/new", TTR("New Script...")), FILE_NEW);
 	file_menu->get_popup()->add_shortcut(ED_SHORTCUT("script_editor/new_textfile", TTR("New Text File...")), FILE_NEW_TEXTFILE);
@@ -3352,10 +3353,11 @@ ScriptEditor::ScriptEditor(EditorNode *p_editor) {
 	file_menu->get_popup()->connect("id_pressed", callable_mp(this, &ScriptEditor::_menu_option));
 
 	script_search_menu = memnew(MenuButton);
-	menu_hb->add_child(script_search_menu);
 	script_search_menu->set_text(TTR("Search"));
 	script_search_menu->set_switch_on_hover(true);
+	script_search_menu->set_shortcut_context(get_instance_id());
 	script_search_menu->get_popup()->connect("id_pressed", callable_mp(this, &ScriptEditor::_menu_option));
+	menu_hb->add_child(script_search_menu);
 
 	MenuButton *debug_menu = memnew(MenuButton);
 	menu_hb->add_child(debug_menu);
