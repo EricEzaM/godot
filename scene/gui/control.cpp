@@ -48,6 +48,27 @@
 #include "editor/plugins/canvas_item_editor_plugin.h"
 #endif
 
+void Control::_set_built_in_shortcut(const StringName &p_name, const Ref<InputEvent> &p_shortcut) {
+	data.built_in_shortcuts.set(p_name, p_shortcut);
+}
+
+Ref<InputEvent> Control::get_builtin_shortcut(const StringName &p_name) {
+	ERR_FAIL_COND_V_MSG(!data.built_in_shortcuts.has(p_name), Ref<InputEvent>(), "Control " + get_name() + " of type " + get_class_name() + " does not have a built in shortcut with name '" + p_name + "'");
+
+	return data.built_in_shortcuts.get(p_name);
+}
+
+void Control::override_builtin_shortcut(const StringName &p_name, const Ref<Shortcut> &p_shortcut) {
+	// Don't error because it will spam the log when any shortcut is changed.
+	//ERR_FAIL_COND_MSG(!data.built_in_shortcuts.has(p_name), "Control " + get_name() + " of type " + get_class_name() + " does not have a built in shortcut with name '" + p_name + "'");
+
+	if (!data.built_in_shortcuts.has(p_name)) {
+		return;
+	}
+
+	data.built_in_shortcuts.set(p_name, p_shortcut->get_shortcut());
+}
+
 #ifdef TOOLS_ENABLED
 Dictionary Control::_edit_get_state() const {
 	Dictionary s;
@@ -468,6 +489,11 @@ void Control::_update_canvas_item_transform() {
 void Control::_notification(int p_notification) {
 	switch (p_notification) {
 		case NOTIFICATION_ENTER_TREE: {
+#ifdef TOOLS_ENABLED
+			if (EditorSettings::get_singleton() && !EditorSettings::get_singleton()->is_connected("shortcut_changed", callable_mp(this, &Control::override_builtin_shortcut))) {
+				EditorSettings::get_singleton()->connect("shortcut_changed", callable_mp(this, &Control::override_builtin_shortcut));
+			}
+#endif
 		} break;
 		case NOTIFICATION_POST_ENTER_TREE: {
 			data.minimum_size_valid = false;

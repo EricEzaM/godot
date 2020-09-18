@@ -4786,11 +4786,16 @@ VisualScriptEditor::VisualScriptEditor() {
 	graph->connect("_begin_node_move", callable_mp(this, &VisualScriptEditor::_begin_node_move));
 	graph->connect("_end_node_move", callable_mp(this, &VisualScriptEditor::_end_node_move));
 	graph->connect("delete_nodes_request", callable_mp(this, &VisualScriptEditor::_on_nodes_delete));
+	graph->connect("copy_nodes_request", callable_mp(this, &VisualScriptEditor::_menu_option), varray(EDIT_COPY_NODES));
+	graph->connect("paste_nodes_request", callable_mp(this, &VisualScriptEditor::_menu_option), varray(EDIT_PASTE_NODES));
 	graph->connect("duplicate_nodes_request", callable_mp(this, &VisualScriptEditor::_on_nodes_duplicate));
 	graph->connect("gui_input", callable_mp(this, &VisualScriptEditor::_graph_gui_input));
 	graph->set_drag_forwarding(this);
 	graph->hide();
 	graph->connect("scroll_offset_changed", callable_mp(this, &VisualScriptEditor::_graph_ofs_changed));
+
+	graph->override_builtin_shortcut("graph_edit/copy_nodes", ED_SHORTCUT("graph_edit/copy_nodes", "Copy Nodes", KEY_MASK_CTRL | KEY_KP_0));
+	graph->override_builtin_shortcut("graph_edit/paste_nodes", ED_SHORTCUT("graph_edit/paste_nodes", "Paste Nodes", KEY_MASK_CTRL | KEY_KP_1));
 
 	/// Add Buttons to Top Bar/Zoom bar.
 	HBoxContainer *graph_hbc = graph->get_zoom_hbox();

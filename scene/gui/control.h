@@ -196,6 +196,8 @@ private:
 		HashMap<StringName, Color> color_override;
 		HashMap<StringName, int> constant_override;
 
+		HashMap<StringName, Ref<InputEvent>> built_in_shortcuts;
+
 	} data;
 
 	// used internally
@@ -268,7 +270,7 @@ protected:
 
 	static void _bind_methods();
 
-	//bind helpers
+	void _set_built_in_shortcut(const StringName &p_name, const Ref<InputEvent> &p_shortcut);
 
 public:
 	enum {
@@ -285,6 +287,9 @@ public:
 		NOTIFICATION_SCROLL_END = 48,
 
 	};
+
+	Ref<InputEvent> get_builtin_shortcut(const StringName &p_name);
+	void override_builtin_shortcut(const StringName &p_name, const Ref<Shortcut> &p_shortcut);
 
 	/* EDITOR */
 #ifdef TOOLS_ENABLED
