@@ -47,6 +47,91 @@ public:
 		GUTTER_TPYE_CUSTOM
 	};
 
+	// All Shortcuts. Default keybinds shown in comment. "SELECT" variants use SHIFT mask.
+	enum Shortcuts {
+		// AutoComplete
+		SHORTCUT_COMPLETION_QUERY, // CMD SPACE (ALT SPACE on Apple)
+		SHORTCUT_COMPLETION_INDEX_UP, // UP
+		SHORTCUT_COMPLETION_INDEX_DOWN, // DOWN
+		SHORTCUT_COMPLETION_INDEX_PAGE_UP, // PGUP
+		SHORTCUT_COMPLETION_INDEX_PAGE_DOWN, // PGDN
+		SHORTCUT_COMPLETION_INDEX_FIRST, // HOME
+		SHORTCUT_COMPLETION_INDEX_LAST, // END
+		SHORTCUT_COMPLETION_CONFIRM, // ENTER, TAB
+		SHORTCUT_COMPLETION_CANCEL, // ESC
+		SHORTCUT_COMPLETION_CLEAR_HINT, // ESC
+
+		// Newlines
+		SHORTCUT_NEW_LINE_BELOW, // CMD ENTER
+		SHORTCUT_NEW_LINE_BELOW_SPLIT_CURRENT, // ENTER
+		SHORTCUT_NEW_LINE_ABOVE, // CMD SHIFT ENTER
+
+		// Indentation
+		SHORTCUT_INDENT, // TAB
+		SHORTCUT_DEDENT, // CMD TAB
+
+		// Backspace and Delete
+		SHORTCUT_BACKSPACE, // BKSPC
+		SHORTCUT_BACKSPACE_WORD, // CMD BKSPC (ALT BKSPC on Apple)
+		SHORTCUT_BACKSPACE_ALL_TO_LEFT, // None (CMD BKSPC on Apple)
+		SHORTCUT_DELETE, // DEL
+		SHORTCUT_DELETE_WORD, // CMD DEL (ALT DEL on Apple)
+		SHORTCUT_DELETE_ALL_TO_RIGHT, // None (CMD DEL on Apple)
+
+		// Cursor Movement left/right
+		SHORTCUT_CURSOR_LEFT, // LEFT
+		SHORTCUT_CURSOR_WORD_LEFT, // CMD LEFT (ALT LEFT on Apple)
+		SHORTCUT_CURSOR_SELECT_LEFT,
+		SHORTCUT_CURSOR_SELECT_WORD_LEFT,
+
+		SHORTCUT_CURSOR_RIGHT, // RIGHT
+		SHORTCUT_CURSOR_WORD_RIGHT, // CMD RIGHT (ALT RIGHT on Apple)
+		SHORTCUT_CURSOR_SELECT_RIGHT,
+		SHORTCUT_CURSOR_SELECT_WORD_RIGHT,
+
+		// Cursor Movement up/down
+		SHORTCUT_CURSOR_UP, // UP
+		SHORTCUT_CURSOR_DOWN, // DOWN
+		SHORTCUT_CURSOR_SELECT_UP,
+		SHORTCUT_CURSOR_SELECT_DOWN,
+
+		// Cursor Movement Line start/end
+		SHORTCUT_CURSOR_LINE_START, // HOME (CTRL A on Apple, CMD LEFT on Apple)
+		SHORTCUT_CURSOR_LINE_END, // END (CTRL E on Apple, CMD RIGHT on Apple)
+		SHORTCUT_CURSOR_SELECT_LINE_START,
+		SHORTCUT_CURSOR_SELECT_LINE_END,
+
+		// Cursor Movement Page up/down
+		SHORTCUT_CURSOR_PAGE_UP, // PgUp
+		SHORTCUT_CURSOR_PAGE_DOWN, // PgDn
+		SHORTCUT_CURSOR_SELECT_PAGE_UP,
+		SHORTCUT_CURSOR_SELECT_PAGE_DOWN,
+
+		// Cursor Movement document start/end
+		SHORTCUT_CURSOR_DOCUMENT_START, // CMD HOME (CMD UP on Apple)
+		SHORTCUT_CURSOR_DOCUMENT_END, // CMD END (CMD DOWN on Apple)
+		SHORTCUT_CURSOR_SELECT_DOCUMENT_START,
+		SHORTCUT_CURSOR_SELECT_DOCUMENT_END,
+
+		// Scrolling
+		SHORTCUT_SCROLL_LINES_UP, // CMD UP (+ ALT on Apple)
+		SHORTCUT_SCROLL_LINES_DOWN, // CMD DOWN (+ ALT on Apple)
+
+		// Select all, Cut, Copy, Paste
+		SHORTCUT_SELECT_ALL, // CMD A
+		SHORTCUT_CUT, // SHIFT DEL, CMD X
+		SHORTCUT_COPY, // CMD C, CMD INS
+		SHORTCUT_PASTE, // CMD V, SHIFT INS
+
+		// Undo/Redo
+		SHORTCUT_UNDO, // CMD Z
+		SHORTCUT_REDO, // CMD SHIFT Z, CMD Y
+
+		// Misc
+		SHORTCUT_OPEN_CONTEXT_MENU, // MENU
+		SHORTCUT_TOGGLE_INSERT_MODE, // INS
+	};
+
 private:
 	struct GutterInfo {
 		GutterType type = GutterType::GUTTER_TYPE_STRING;
@@ -435,6 +520,23 @@ private:
 
 	int _calculate_spaces_till_next_left_indent(int column);
 	int _calculate_spaces_till_next_right_indent(int column);
+
+	// Methods used in shortcuts
+	void _new_line(bool p_split_current = true, bool p_above = false);
+	void _move_cursor_left(bool p_select = false, bool p_move_by_word = false);
+	void _move_cursor_right(bool p_select = false, bool p_move_by_word = false);
+	void _move_cursor_up(bool p_select = false);
+	void _move_cursor_down(bool p_select = false);
+	void _move_cursor_to_line_start(bool p_select = false);
+	void _move_cursor_to_line_end(bool p_select = false);
+	void _move_cursor_page_up(bool p_select = false);
+	void _move_cursor_page_down(bool p_select = false);
+	void _backspace(bool p_word = false, bool p_all_to_left = false);
+	void _delete(bool p_word = false, bool p_all_to_right = false);
+	void _delete_selection();
+	void _move_cursor_document_start(bool p_select = false);
+	void _move_cursor_document_end(bool p_select = false);
+	void _handle_unicode_character(uint32_t unicode, bool p_had_selection, bool p_update_auto_complete);
 
 protected:
 	struct Cache {

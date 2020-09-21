@@ -48,25 +48,54 @@
 #include "editor/plugins/canvas_item_editor_plugin.h"
 #endif
 
-void Control::_set_built_in_shortcut(const StringName &p_name, const Ref<InputEvent> &p_shortcut) {
-	data.built_in_shortcuts.set(p_name, p_shortcut);
+void Control::_set_built_in_shortcut(const int &p_idx, const Ref<InputEvent> &p_shortcut, const Ref<InputEvent> &p_alt_shortcut1, const Ref<InputEvent> &p_alt_shortcut2, const Ref<InputEvent> &p_alt_shortcut3) {
+	Vector<Ref<InputEvent>> shortcuts;
+
+	// No check for validity of first shortcut. Shortcut can be invalid - just means that there is no shortcut assigned to the action.
+	shortcuts.push_back(p_shortcut);
+	if (p_alt_shortcut1.is_valid()) {
+		shortcuts.push_back(p_alt_shortcut1);
+	}
+	if (p_alt_shortcut2.is_valid()) {
+		shortcuts.push_back(p_alt_shortcut2);
+	}
+	if (p_alt_shortcut3.is_valid()) {
+		shortcuts.push_back(p_alt_shortcut3);
+	}
+	data.built_in_shortcuts.set(p_idx, shortcuts);
 }
 
-Ref<InputEvent> Control::get_builtin_shortcut(const StringName &p_name) {
-	ERR_FAIL_COND_V_MSG(!data.built_in_shortcuts.has(p_name), Ref<InputEvent>(), "Control " + get_name() + " of type " + get_class_name() + " does not have a built in shortcut with name '" + p_name + "'");
+//Ref<InputEvent> Control::get_builtin_shortcut(const int &p_idx) const {
+//	// Return a valid ptr, but just make it an empty event.
+//	Ref<InputEvent> ie;
+//	ie.instance();
+//	ERR_FAIL_COND_V_MSG(!data.built_in_shortcuts.has(p_idx), ie, "Control " + get_name() + " of type " + get_class_name() + " does not have a built in shortcut with index '" + itos(p_idx) + "'");
+//
+//	return data.built_in_shortcuts.get(p_idx);
+//}
 
-	return data.built_in_shortcuts.get(p_name);
+bool Control::match_builtin_shortcut(const int &p_idx, const Ref<InputEvent> &p_event) const {
+	if (!data.built_in_shortcuts.has(p_idx)) {
+		return false;
+	}
+
+	// Loop through all shortcuts for and return true if any of them match.
+	Vector<Ref<InputEvent>> shortcuts = data.built_in_shortcuts.get(p_idx);
+	for (int i = 0; i < shortcuts.size(); i++) {
+		if (shortcuts[i].is_valid() && shortcuts[i]->shortcut_match(p_event)) {
+			return true;
+		}
+	}
+
+	return false;
 }
 
-void Control::override_builtin_shortcut(const StringName &p_name, const Ref<Shortcut> &p_shortcut) {
-	// Don't error because it will spam the log when any shortcut is changed.
-	//ERR_FAIL_COND_MSG(!data.built_in_shortcuts.has(p_name), "Control " + get_name() + " of type " + get_class_name() + " does not have a built in shortcut with name '" + p_name + "'");
-
-	if (!data.built_in_shortcuts.has(p_name)) {
+void Control::override_builtin_shortcut(const int &p_idx, const Ref<InputEvent> &p_shortcut, const Ref<InputEvent> &p_alt_shortcut1, const Ref<InputEvent> &p_alt_shortcut2, const Ref<InputEvent> &p_alt_shortcut3) {
+	if (!data.built_in_shortcuts.has(p_idx)) {
 		return;
 	}
 
-	data.built_in_shortcuts.set(p_name, p_shortcut->get_shortcut());
+	_set_built_in_shortcut(p_idx, p_shortcut, p_alt_shortcut1, p_alt_shortcut2, p_alt_shortcut3);
 }
 
 #ifdef TOOLS_ENABLED
@@ -489,11 +518,11 @@ void Control::_update_canvas_item_transform() {
 void Control::_notification(int p_notification) {
 	switch (p_notification) {
 		case NOTIFICATION_ENTER_TREE: {
-#ifdef TOOLS_ENABLED
-			if (EditorSettings::get_singleton() && !EditorSettings::get_singleton()->is_connected("shortcut_changed", callable_mp(this, &Control::override_builtin_shortcut))) {
-				EditorSettings::get_singleton()->connect("shortcut_changed", callable_mp(this, &Control::override_builtin_shortcut));
-			}
-#endif
+			//#ifdef TOOLS_ENABLED
+			//			if (EditorSettings::get_singleton() && !EditorSettings::get_singleton()->is_connected("shortcut_changed", callable_mp(this, &Control::override_builtin_shortcut))) {
+			//				EditorSettings::get_singleton()->connect("shortcut_changed", callable_mp(this, &Control::override_builtin_shortcut));
+			//			}
+			//#endif
 		} break;
 		case NOTIFICATION_POST_ENTER_TREE: {
 			data.minimum_size_valid = false;

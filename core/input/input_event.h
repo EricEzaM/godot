@@ -290,6 +290,8 @@ public:
 
 	virtual String as_text() const override;
 
+	static Ref<InputEventKey> create_reference(uint32_t p_keycode, uint32_t p_modifier_masks = 0);
+
 	InputEventKey() {}
 };
 

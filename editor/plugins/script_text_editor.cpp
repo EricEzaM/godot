@@ -1727,6 +1727,13 @@ void ScriptTextEditor::_enable_code_editor() {
 
 	add_child(connection_info_dialog);
 
+	code_editor->get_text_editor()->override_builtin_shortcut(TextEdit::SHORTCUT_UNDO, ED_GET_SHORTCUT("script_text_editor/undo")->get_shortcut());
+	code_editor->get_text_editor()->override_builtin_shortcut(TextEdit::SHORTCUT_REDO, ED_GET_SHORTCUT("script_text_editor/redo")->get_shortcut());
+	code_editor->get_text_editor()->override_builtin_shortcut(TextEdit::SHORTCUT_CUT, ED_GET_SHORTCUT("script_text_editor/cut")->get_shortcut());
+	code_editor->get_text_editor()->override_builtin_shortcut(TextEdit::SHORTCUT_COPY, ED_GET_SHORTCUT("script_text_editor/copy")->get_shortcut());
+	code_editor->get_text_editor()->override_builtin_shortcut(TextEdit::SHORTCUT_PASTE, ED_GET_SHORTCUT("script_text_editor/paste")->get_shortcut());
+	code_editor->get_text_editor()->override_builtin_shortcut(TextEdit::SHORTCUT_SELECT_ALL, ED_GET_SHORTCUT("script_text_editor/select_all")->get_shortcut());
+
 	edit_hb->add_child(search_menu);
 	search_menu->get_popup()->add_shortcut(ED_GET_SHORTCUT("script_text_editor/find"), SEARCH_FIND);
 	search_menu->get_popup()->add_shortcut(ED_GET_SHORTCUT("script_text_editor/find_next"), SEARCH_FIND_NEXT);

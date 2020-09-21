@@ -4148,6 +4148,9 @@ void VisualScriptEditor::_menu_option(int p_what) {
 		case EDIT_FIND_NODE_TYPE: {
 			_generic_search(script->get_instance_base_type());
 		} break;
+		case EDIT_DUPLICATE_NODES: {
+			_on_nodes_duplicate();
+		} break;
 		case EDIT_COPY_NODES:
 		case EDIT_CUT_NODES: {
 			if (!script->has_function(default_func)) {
@@ -4731,6 +4734,7 @@ VisualScriptEditor::VisualScriptEditor() {
 	edit_menu->get_popup()->add_shortcut(ED_GET_SHORTCUT("visual_script_editor/toggle_breakpoint"), EDIT_TOGGLE_BREAKPOINT);
 	edit_menu->get_popup()->add_shortcut(ED_GET_SHORTCUT("visual_script_editor/find_node_type"), EDIT_FIND_NODE_TYPE);
 	edit_menu->get_popup()->add_separator();
+	edit_menu->get_popup()->add_shortcut(ED_GET_SHORTCUT("visual_script_editor/duplicate_nodes"), EDIT_DUPLICATE_NODES);
 	edit_menu->get_popup()->add_shortcut(ED_GET_SHORTCUT("visual_script_editor/copy_nodes"), EDIT_COPY_NODES);
 	edit_menu->get_popup()->add_shortcut(ED_GET_SHORTCUT("visual_script_editor/cut_nodes"), EDIT_CUT_NODES);
 	edit_menu->get_popup()->add_shortcut(ED_GET_SHORTCUT("visual_script_editor/paste_nodes"), EDIT_PASTE_NODES);
@@ -4794,8 +4798,10 @@ VisualScriptEditor::VisualScriptEditor() {
 	graph->hide();
 	graph->connect("scroll_offset_changed", callable_mp(this, &VisualScriptEditor::_graph_ofs_changed));
 
-	graph->override_builtin_shortcut("graph_edit/copy_nodes", ED_SHORTCUT("graph_edit/copy_nodes", "Copy Nodes", KEY_MASK_CTRL | KEY_KP_0));
-	graph->override_builtin_shortcut("graph_edit/paste_nodes", ED_SHORTCUT("graph_edit/paste_nodes", "Paste Nodes", KEY_MASK_CTRL | KEY_KP_1));
+	graph->override_builtin_shortcut(GraphEdit::SHORTCUT_DELETE, ED_GET_SHORTCUT("visual_script_editor/delete_selected"));
+	graph->override_builtin_shortcut(GraphEdit::SHORTCUT_DUPLICATE, ED_GET_SHORTCUT("visual_script_editor/duplicate_nodes"));
+	graph->override_builtin_shortcut(GraphEdit::SHORTCUT_COPY_NODES, ED_GET_SHORTCUT("visual_script_editor/copy_nodes"));
+	graph->override_builtin_shortcut(GraphEdit::SHORTCUT_PASTE_NODES, ED_GET_SHORTCUT("visual_script_editor/paste_nodes"));
 
 	/// Add Buttons to Top Bar/Zoom bar.
 	HBoxContainer *graph_hbc = graph->get_zoom_hbox();
@@ -4980,6 +4986,7 @@ static void register_editor_callback() {
 	ED_SHORTCUT("visual_script_editor/delete_selected", TTR("Delete Selected"), KEY_DELETE);
 	ED_SHORTCUT("visual_script_editor/toggle_breakpoint", TTR("Toggle Breakpoint"), KEY_F9);
 	ED_SHORTCUT("visual_script_editor/find_node_type", TTR("Find Node Type"), KEY_MASK_CMD + KEY_F);
+	ED_SHORTCUT("visual_script_editor/duplicate_nodes", TTR("Duplicate Nodes"), KEY_MASK_CMD + KEY_D);
 	ED_SHORTCUT("visual_script_editor/copy_nodes", TTR("Copy Nodes"), KEY_MASK_CMD + KEY_C);
 	ED_SHORTCUT("visual_script_editor/cut_nodes", TTR("Cut Nodes"), KEY_MASK_CMD + KEY_X);
 	ED_SHORTCUT("visual_script_editor/paste_nodes", TTR("Paste Nodes"), KEY_MASK_CMD + KEY_V);

@@ -1032,16 +1032,16 @@ void GraphEdit::_gui_input(const Ref<InputEvent> &p_ev) {
 	}
 
 	if (p_ev->is_pressed()) {
-		if (get_builtin_shortcut("graph_edit/duplicate_nodes")->shortcut_match(p_ev)) {
+		if (match_builtin_shortcut(SHORTCUT_DUPLICATE, p_ev)) {
 			emit_signal("duplicate_nodes_request");
 			accept_event();
-		} else if (get_builtin_shortcut("graph_edit/copy_nodes")->shortcut_match(p_ev)) {
+		} else if (match_builtin_shortcut(SHORTCUT_COPY_NODES, p_ev)) {
 			emit_signal("copy_nodes_request");
 			accept_event();
-		} else if (get_builtin_shortcut("graph_edit/paste_nodes")->shortcut_match(p_ev)) {
+		} else if (match_builtin_shortcut(SHORTCUT_PASTE_NODES, p_ev)) {
 			emit_signal("paste_nodes_request");
 			accept_event();
-		} else if (get_builtin_shortcut("graph_edit/delete_nodes")->shortcut_match(p_ev)) {
+		} else if (match_builtin_shortcut(SHORTCUT_DELETE, p_ev)) {
 			emit_signal("delete_nodes_request");
 			accept_event();
 		}
@@ -1377,18 +1377,18 @@ GraphEdit::GraphEdit() {
 
 	Ref<InputEventKey> ie_dupe = ie_base->duplicate();
 	ie_dupe->set_keycode(KEY_D);
-	_set_built_in_shortcut("graph_edit/duplicate_nodes", ie_dupe);
+	_set_built_in_shortcut(SHORTCUT_DUPLICATE, ie_dupe);
 
 	Ref<InputEventKey> ie_copy = ie_base->duplicate();
 	ie_copy->set_keycode(KEY_C);
-	_set_built_in_shortcut("graph_edit/copy_nodes", ie_copy);
+	_set_built_in_shortcut(SHORTCUT_COPY_NODES, ie_copy);
 
 	Ref<InputEventKey> ie_paste = ie_base->duplicate();
 	ie_paste->set_keycode(KEY_V);
-	_set_built_in_shortcut("graph_edit/paste_nodes", ie_paste);
+	_set_built_in_shortcut(SHORTCUT_PASTE_NODES, ie_paste);
 
 	Ref<InputEventKey> ie_del = ie_base->duplicate();
 	ie_del->set_keycode(KEY_V);
 	ie_del->set_control(false);
-	_set_built_in_shortcut("graph_edit/delete_nodes", ie_del);
+	_set_built_in_shortcut(SHORTCUT_DELETE, ie_del);
 }

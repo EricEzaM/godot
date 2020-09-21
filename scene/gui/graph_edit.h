@@ -64,6 +64,13 @@ public:
 		float activity;
 	};
 
+	enum Shortcuts {
+		SHORTCUT_DUPLICATE,
+		SHORTCUT_COPY_NODES,
+		SHORTCUT_PASTE_NODES,
+		SHORTCUT_DELETE
+	};
+
 private:
 	Button *zoom_minus;
 	Button *zoom_reset;
