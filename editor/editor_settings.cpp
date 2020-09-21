@@ -1482,7 +1482,6 @@ String EditorSettings::get_editor_layouts_config() const {
 
 void EditorSettings::add_shortcut(const String &p_name, Ref<Shortcut> &p_shortcut) {
 	shortcuts[p_name] = p_shortcut;
-	emit_signal("shortcut_changed", p_name, p_shortcut);
 }
 
 bool EditorSettings::is_shortcut(const String &p_name, const Ref<InputEvent> &p_event) const {
@@ -1608,7 +1607,6 @@ void EditorSettings::_bind_methods() {
 	ClassDB::bind_method(D_METHOD("get_recent_dirs"), &EditorSettings::get_recent_dirs);
 
 	ADD_SIGNAL(MethodInfo("settings_changed"));
-	ADD_SIGNAL(MethodInfo("shortcut_changed", PropertyInfo(Variant::STRING, "name"), PropertyInfo(Variant::OBJECT, "shortcut", PropertyHint::PROPERTY_HINT_NONE, "Shortcut")));
 
 	BIND_CONSTANT(NOTIFICATION_EDITOR_SETTINGS_CHANGED);
 }

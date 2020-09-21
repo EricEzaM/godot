@@ -509,11 +509,6 @@ void Control::_update_canvas_item_transform() {
 void Control::_notification(int p_notification) {
 	switch (p_notification) {
 		case NOTIFICATION_ENTER_TREE: {
-			//#ifdef TOOLS_ENABLED
-			//			if (EditorSettings::get_singleton() && !EditorSettings::get_singleton()->is_connected("shortcut_changed", callable_mp(this, &Control::override_builtin_shortcut))) {
-			//				EditorSettings::get_singleton()->connect("shortcut_changed", callable_mp(this, &Control::override_builtin_shortcut));
-			//			}
-			//#endif
 		} break;
 		case NOTIFICATION_POST_ENTER_TREE: {
 			data.minimum_size_valid = false;
