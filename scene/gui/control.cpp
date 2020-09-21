@@ -48,8 +48,8 @@
 #include "editor/plugins/canvas_item_editor_plugin.h"
 #endif
 
-void Control::_set_built_in_shortcut(const int &p_idx, const Ref<InputEvent> &p_shortcut, const Ref<InputEvent> &p_alt_shortcut1, const Ref<InputEvent> &p_alt_shortcut2, const Ref<InputEvent> &p_alt_shortcut3) {
-	Vector<Ref<InputEvent>> shortcuts;
+void Control::_set_built_in_shortcut(const int &p_idx, const Ref<Shortcut> &p_shortcut, const Ref<Shortcut> &p_alt_shortcut1, const Ref<Shortcut> &p_alt_shortcut2, const Ref<Shortcut> &p_alt_shortcut3) {
+	Vector<Ref<Shortcut>> shortcuts;
 
 	// No check for validity of first shortcut. Shortcut can be invalid - just means that there is no shortcut assigned to the action.
 	shortcuts.push_back(p_shortcut);
@@ -65,24 +65,15 @@ void Control::_set_built_in_shortcut(const int &p_idx, const Ref<InputEvent> &p_
 	data.built_in_shortcuts.set(p_idx, shortcuts);
 }
 
-//Ref<InputEvent> Control::get_builtin_shortcut(const int &p_idx) const {
-//	// Return a valid ptr, but just make it an empty event.
-//	Ref<InputEvent> ie;
-//	ie.instance();
-//	ERR_FAIL_COND_V_MSG(!data.built_in_shortcuts.has(p_idx), ie, "Control " + get_name() + " of type " + get_class_name() + " does not have a built in shortcut with index '" + itos(p_idx) + "'");
-//
-//	return data.built_in_shortcuts.get(p_idx);
-//}
-
-bool Control::match_builtin_shortcut(const int &p_idx, const Ref<InputEvent> &p_event) const {
+bool Control::_match_builtin_shortcut(const int &p_idx, const Ref<InputEvent> &p_event) const {
 	if (!data.built_in_shortcuts.has(p_idx)) {
 		return false;
 	}
 
 	// Loop through all shortcuts for and return true if any of them match.
-	Vector<Ref<InputEvent>> shortcuts = data.built_in_shortcuts.get(p_idx);
+	Vector<Ref<Shortcut>> shortcuts = data.built_in_shortcuts.get(p_idx);
 	for (int i = 0; i < shortcuts.size(); i++) {
-		if (shortcuts[i].is_valid() && shortcuts[i]->shortcut_match(p_event)) {
+		if (shortcuts[i].is_valid() && shortcuts[i]->is_shortcut(p_event)) {
 			return true;
 		}
 	}
@@ -90,7 +81,7 @@ bool Control::match_builtin_shortcut(const int &p_idx, const Ref<InputEvent> &p_
 	return false;
 }
 
-void Control::override_builtin_shortcut(const int &p_idx, const Ref<InputEvent> &p_shortcut, const Ref<InputEvent> &p_alt_shortcut1, const Ref<InputEvent> &p_alt_shortcut2, const Ref<InputEvent> &p_alt_shortcut3) {
+void Control::override_builtin_shortcut(const int &p_idx, const Ref<Shortcut> &p_shortcut, const Ref<Shortcut> &p_alt_shortcut1, const Ref<Shortcut> &p_alt_shortcut2, const Ref<Shortcut> &p_alt_shortcut3) {
 	if (!data.built_in_shortcuts.has(p_idx)) {
 		return;
 	}

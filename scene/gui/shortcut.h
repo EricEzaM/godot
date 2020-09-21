@@ -50,6 +50,8 @@ public:
 
 	String get_as_text() const;
 
+	static Ref<Shortcut> create_reference(const Ref<InputEvent> &p_shortcut);
+
 	Shortcut();
 };
 

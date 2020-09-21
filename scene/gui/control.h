@@ -196,7 +196,7 @@ private:
 		HashMap<StringName, Color> color_override;
 		HashMap<StringName, int> constant_override;
 
-		HashMap<int, Vector<Ref<InputEvent>>> built_in_shortcuts;
+		HashMap<int, Vector<Ref<Shortcut>>> built_in_shortcuts;
 
 	} data;
 
@@ -270,7 +270,8 @@ protected:
 
 	static void _bind_methods();
 
-	void _set_built_in_shortcut(const int &p_idx, const Ref<InputEvent> &p_shortcut, const Ref<InputEvent> &p_alt_shortcut1 = Ref<InputEvent>(), const Ref<InputEvent> &p_alt_shortcut2 = Ref<InputEvent>(), const Ref<InputEvent> &p_alt_shortcut3 = Ref<InputEvent>());
+	void _set_built_in_shortcut(const int &p_idx, const Ref<Shortcut> &p_shortcut, const Ref<Shortcut> &p_alt_shortcut1 = Ref<Shortcut>(), const Ref<Shortcut> &p_alt_shortcut2 = Ref<Shortcut>(), const Ref<Shortcut> &p_alt_shortcut3 = Ref<Shortcut>());
+	bool _match_builtin_shortcut(const int &p_idx, const Ref<InputEvent> &p_event) const;
 
 public:
 	enum {
@@ -288,10 +289,7 @@ public:
 
 	};
 
-	bool match_builtin_shortcut(const int &p_idx, const Ref<InputEvent> &p_event) const;
-
-	//Ref<InputEvent> get_builtin_shortcut(const int &p_idx) const;
-	void override_builtin_shortcut(const int &p_idx, const Ref<InputEvent> &p_shortcut, const Ref<InputEvent> &p_alt_shortcut1 = Ref<InputEvent>(), const Ref<InputEvent> &p_alt_shortcut2 = Ref<InputEvent>(), const Ref<InputEvent> &p_alt_shortcut3 = Ref<InputEvent>());
+	void override_builtin_shortcut(const int &p_idx, const Ref<Shortcut> &p_shortcut, const Ref<Shortcut> &p_alt_shortcut1 = Ref<Shortcut>(), const Ref<Shortcut> &p_alt_shortcut2 = Ref<Shortcut>(), const Ref<Shortcut> &p_alt_shortcut3 = Ref<Shortcut>());
 
 	/* EDITOR */
 #ifdef TOOLS_ENABLED

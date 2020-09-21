@@ -1032,16 +1032,16 @@ void GraphEdit::_gui_input(const Ref<InputEvent> &p_ev) {
 	}
 
 	if (p_ev->is_pressed()) {
-		if (match_builtin_shortcut(SHORTCUT_DUPLICATE, p_ev)) {
+		if (_match_builtin_shortcut(SHORTCUT_DUPLICATE, p_ev)) {
 			emit_signal("duplicate_nodes_request");
 			accept_event();
-		} else if (match_builtin_shortcut(SHORTCUT_COPY_NODES, p_ev)) {
+		} else if (_match_builtin_shortcut(SHORTCUT_COPY_NODES, p_ev)) {
 			emit_signal("copy_nodes_request");
 			accept_event();
-		} else if (match_builtin_shortcut(SHORTCUT_PASTE_NODES, p_ev)) {
+		} else if (_match_builtin_shortcut(SHORTCUT_PASTE_NODES, p_ev)) {
 			emit_signal("paste_nodes_request");
 			accept_event();
-		} else if (match_builtin_shortcut(SHORTCUT_DELETE, p_ev)) {
+		} else if (_match_builtin_shortcut(SHORTCUT_DELETE, p_ev)) {
 			emit_signal("delete_nodes_request");
 			accept_event();
 		}
@@ -1370,25 +1370,18 @@ GraphEdit::GraphEdit() {
 	just_disconnected = false;
 	set_clip_contents(true);
 
-	Ref<InputEventKey> ie_base;
-	ie_base.instance();
-	ie_base->set_control(true);
-	ie_base->set_pressed(true);
+	Ref<Shortcut> sc;
+	Ref<Shortcut> sc2;
 
-	Ref<InputEventKey> ie_dupe = ie_base->duplicate();
-	ie_dupe->set_keycode(KEY_D);
-	_set_built_in_shortcut(SHORTCUT_DUPLICATE, ie_dupe);
+	sc = Shortcut::create_reference(InputEventKey::create_reference(KEY_D, KEY_MASK_CMD));
+	_set_built_in_shortcut(SHORTCUT_DUPLICATE, sc);
 
-	Ref<InputEventKey> ie_copy = ie_base->duplicate();
-	ie_copy->set_keycode(KEY_C);
-	_set_built_in_shortcut(SHORTCUT_COPY_NODES, ie_copy);
+	sc = Shortcut::create_reference(InputEventKey::create_reference(KEY_C, KEY_MASK_CMD));
+	_set_built_in_shortcut(SHORTCUT_COPY_NODES, sc);
 
-	Ref<InputEventKey> ie_paste = ie_base->duplicate();
-	ie_paste->set_keycode(KEY_V);
-	_set_built_in_shortcut(SHORTCUT_PASTE_NODES, ie_paste);
+	sc = Shortcut::create_reference(InputEventKey::create_reference(KEY_V, KEY_MASK_CMD));
+	_set_built_in_shortcut(SHORTCUT_PASTE_NODES, sc);
 
-	Ref<InputEventKey> ie_del = ie_base->duplicate();
-	ie_del->set_keycode(KEY_V);
-	ie_del->set_control(false);
-	_set_built_in_shortcut(SHORTCUT_DELETE, ie_del);
+	sc = Shortcut::create_reference(InputEventKey::create_reference(KEY_DELETE));
+	_set_built_in_shortcut(SHORTCUT_DELETE, sc);
 }
