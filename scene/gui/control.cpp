@@ -81,14 +81,6 @@ bool Control::_match_builtin_shortcut(const int &p_idx, const Ref<InputEvent> &p
 	return false;
 }
 
-void Control::override_builtin_shortcut(const int &p_idx, const Ref<Shortcut> &p_shortcut, const Ref<Shortcut> &p_alt_shortcut1, const Ref<Shortcut> &p_alt_shortcut2, const Ref<Shortcut> &p_alt_shortcut3) {
-	if (!data.built_in_shortcuts.has(p_idx)) {
-		return;
-	}
-
-	_set_built_in_shortcut(p_idx, p_shortcut, p_alt_shortcut1, p_alt_shortcut2, p_alt_shortcut3);
-}
-
 #ifdef TOOLS_ENABLED
 Dictionary Control::_edit_get_state() const {
 	Dictionary s;

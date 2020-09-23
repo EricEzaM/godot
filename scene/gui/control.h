@@ -289,8 +289,6 @@ public:
 
 	};
 
-	void override_builtin_shortcut(const int &p_idx, const Ref<Shortcut> &p_shortcut, const Ref<Shortcut> &p_alt_shortcut1 = Ref<Shortcut>(), const Ref<Shortcut> &p_alt_shortcut2 = Ref<Shortcut>(), const Ref<Shortcut> &p_alt_shortcut3 = Ref<Shortcut>());
-
 	/* EDITOR */
 #ifdef TOOLS_ENABLED
 	virtual Dictionary _edit_get_state() const override;

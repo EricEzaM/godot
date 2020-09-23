@@ -6489,6 +6489,8 @@ void TextEdit::_bind_methods() {
 	ClassDB::bind_method(D_METHOD("set_minimap_width", "width"), &TextEdit::set_minimap_width);
 	ClassDB::bind_method(D_METHOD("get_minimap_width"), &TextEdit::get_minimap_width);
 
+	ClassDB::bind_method(D_METHOD("override_builtin_shortcut", "builtin_shortcut", "shortcut", "alt_shortcut1", "alt_shortcut2", "alt_shortcut3"), &TextEdit::override_builtin_shortcut, DEFVAL(Ref<Shortcut>()), DEFVAL(Ref<Shortcut>()), DEFVAL(Ref<Shortcut>()));
+
 	ADD_PROPERTY(PropertyInfo(Variant::STRING, "text", PROPERTY_HINT_MULTILINE_TEXT), "set_text", "get_text");
 	ADD_PROPERTY(PropertyInfo(Variant::BOOL, "readonly"), "set_readonly", "is_readonly");
 	ADD_PROPERTY(PropertyInfo(Variant::BOOL, "highlight_current_line"), "set_highlight_current_line", "is_highlight_current_line_enabled");
@@ -6538,10 +6540,24 @@ void TextEdit::_bind_methods() {
 	BIND_ENUM_CONSTANT(MENU_REDO);
 	BIND_ENUM_CONSTANT(MENU_MAX);
 
+	BIND_ENUM_CONSTANT(SHORTCUT_COMPLETION_QUERY);
+	BIND_ENUM_CONSTANT(SHORTCUT_SELECT_ALL);
+	BIND_ENUM_CONSTANT(SHORTCUT_CUT);
+	BIND_ENUM_CONSTANT(SHORTCUT_COPY);
+	BIND_ENUM_CONSTANT(SHORTCUT_PASTE);
+	BIND_ENUM_CONSTANT(SHORTCUT_UNDO);
+	BIND_ENUM_CONSTANT(SHORTCUT_REDO);
+
 	GLOBAL_DEF("gui/timers/text_edit_idle_detect_sec", 3);
 	ProjectSettings::get_singleton()->set_custom_property_info("gui/timers/text_edit_idle_detect_sec", PropertyInfo(Variant::FLOAT, "gui/timers/text_edit_idle_detect_sec", PROPERTY_HINT_RANGE, "0,10,0.01,or_greater")); // No negative numbers.
 	GLOBAL_DEF("gui/common/text_edit_undo_stack_max_size", 1024);
 	ProjectSettings::get_singleton()->set_custom_property_info("gui/common/text_edit_undo_stack_max_size", PropertyInfo(Variant::INT, "gui/common/text_edit_undo_stack_max_size", PROPERTY_HINT_RANGE, "0,10000,1,or_greater")); // No negative numbers.
+}
+
+void TextEdit::override_builtin_shortcut(BuiltInShortcut p_idx, Ref<Shortcut> p_shortcut, Ref<Shortcut> p_alt_shortcut1, Ref<Shortcut> p_alt_shortcut2, Ref<Shortcut> p_alt_shortcut3) {
+	ERR_FAIL_INDEX(int(p_idx), SHORTCUT_MAX);
+
+	_set_built_in_shortcut(p_idx, p_shortcut, p_alt_shortcut1, p_alt_shortcut2, p_alt_shortcut3);
 }
 
 TextEdit::TextEdit() {

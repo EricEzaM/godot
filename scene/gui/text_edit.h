@@ -48,7 +48,7 @@ public:
 	};
 
 	// All Shortcuts. Default keybinds shown in comment. "SELECT" variants use SHIFT mask.
-	enum Shortcuts {
+	enum BuiltInShortcut {
 		// AutoComplete
 		SHORTCUT_COMPLETION_QUERY, // CMD SPACE (ALT SPACE on Apple)
 		SHORTCUT_COMPLETION_INDEX_UP, // UP
@@ -130,6 +130,8 @@ public:
 		// Misc
 		SHORTCUT_OPEN_CONTEXT_MENU, // MENU
 		SHORTCUT_TOGGLE_INSERT_MODE, // INS
+
+		SHORTCUT_MAX
 	};
 
 private:
@@ -591,6 +593,8 @@ protected:
 	static void _bind_methods();
 
 public:
+	void override_builtin_shortcut(BuiltInShortcut p_idx, Ref<Shortcut> p_shortcut, Ref<Shortcut> p_alt_shortcut1 = Ref<Shortcut>(), Ref<Shortcut> p_alt_shortcut2 = Ref<Shortcut>(), Ref<Shortcut> p_alt_shortcut3 = Ref<Shortcut>());
+
 	/* Syntax Highlighting. */
 	Ref<SyntaxHighlighter> get_syntax_highlighter();
 	void set_syntax_highlighter(Ref<SyntaxHighlighter> p_syntax_highlighter);
@@ -865,5 +869,6 @@ public:
 VARIANT_ENUM_CAST(TextEdit::GutterType);
 VARIANT_ENUM_CAST(TextEdit::MenuItems);
 VARIANT_ENUM_CAST(TextEdit::SearchFlags);
+VARIANT_ENUM_CAST(TextEdit::BuiltInShortcut);
 
 #endif // TEXT_EDIT_H
