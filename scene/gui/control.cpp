@@ -48,39 +48,6 @@
 #include "editor/plugins/canvas_item_editor_plugin.h"
 #endif
 
-void Control::_set_built_in_shortcut(const int &p_idx, const Ref<Shortcut> &p_shortcut, const Ref<Shortcut> &p_alt_shortcut1, const Ref<Shortcut> &p_alt_shortcut2, const Ref<Shortcut> &p_alt_shortcut3) {
-	Vector<Ref<Shortcut>> shortcuts;
-
-	// No check for validity of first shortcut. Shortcut can be invalid - just means that there is no shortcut assigned to the action.
-	shortcuts.push_back(p_shortcut);
-	if (p_alt_shortcut1.is_valid()) {
-		shortcuts.push_back(p_alt_shortcut1);
-	}
-	if (p_alt_shortcut2.is_valid()) {
-		shortcuts.push_back(p_alt_shortcut2);
-	}
-	if (p_alt_shortcut3.is_valid()) {
-		shortcuts.push_back(p_alt_shortcut3);
-	}
-	data.built_in_shortcuts.set(p_idx, shortcuts);
-}
-
-bool Control::_match_builtin_shortcut(const int &p_idx, const Ref<InputEvent> &p_event) const {
-	if (!data.built_in_shortcuts.has(p_idx)) {
-		return false;
-	}
-
-	// Loop through all shortcuts for and return true if any of them match.
-	Vector<Ref<Shortcut>> shortcuts = data.built_in_shortcuts.get(p_idx);
-	for (int i = 0; i < shortcuts.size(); i++) {
-		if (shortcuts[i].is_valid() && shortcuts[i]->is_shortcut(p_event)) {
-			return true;
-		}
-	}
-
-	return false;
-}
-
 #ifdef TOOLS_ENABLED
 Dictionary Control::_edit_get_state() const {
 	Dictionary s;

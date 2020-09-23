@@ -2928,12 +2928,12 @@ void TextEdit::_gui_input(const Ref<InputEvent> &p_gui_input) {
 
 		// AUTO-COMPLETE
 
-		if (_match_builtin_shortcut(SHORTCUT_COMPLETION_QUERY, p_gui_input)) {
+		if (k->is_action("ui_text_completion_query")) {
 			query_code_comple();
 		}
 
 		if (completion_active) {
-			if (_match_builtin_shortcut(SHORTCUT_COMPLETION_INDEX_UP, p_gui_input)) {
+			if (k->is_action("ui_up")) {
 				if (completion_index > 0) {
 					completion_index--;
 				} else {
@@ -2943,7 +2943,7 @@ void TextEdit::_gui_input(const Ref<InputEvent> &p_gui_input) {
 				update();
 				event_accepted = true;
 			}
-			if (_match_builtin_shortcut(SHORTCUT_COMPLETION_INDEX_DOWN, p_gui_input)) {
+			if (k->is_action("ui_down")) {
 				if (completion_index < completion_options.size() - 1) {
 					completion_index++;
 				} else {
@@ -2953,7 +2953,7 @@ void TextEdit::_gui_input(const Ref<InputEvent> &p_gui_input) {
 				update();
 				event_accepted = true;
 			}
-			if (_match_builtin_shortcut(SHORTCUT_COMPLETION_INDEX_PAGE_UP, p_gui_input)) {
+			if (k->is_action("ui_page_up")) {
 				completion_index -= get_theme_constant("completion_lines");
 				if (completion_index < 0) {
 					completion_index = 0;
@@ -2962,7 +2962,7 @@ void TextEdit::_gui_input(const Ref<InputEvent> &p_gui_input) {
 				update();
 				event_accepted = true;
 			}
-			if (_match_builtin_shortcut(SHORTCUT_COMPLETION_INDEX_PAGE_DOWN, p_gui_input)) {
+			if (k->is_action("ui_page_down")) {
 				completion_index += get_theme_constant("completion_lines");
 				if (completion_index >= completion_options.size()) {
 					completion_index = completion_options.size() - 1;
@@ -2971,7 +2971,7 @@ void TextEdit::_gui_input(const Ref<InputEvent> &p_gui_input) {
 				update();
 				event_accepted = true;
 			}
-			if (_match_builtin_shortcut(SHORTCUT_COMPLETION_INDEX_FIRST, p_gui_input)) {
+			if (k->is_action("ui_home")) {
 				if (completion_index > 0) {
 					completion_index = 0;
 					completion_current = completion_options[completion_index];
@@ -2979,7 +2979,7 @@ void TextEdit::_gui_input(const Ref<InputEvent> &p_gui_input) {
 				}
 				event_accepted = true;
 			}
-			if (_match_builtin_shortcut(SHORTCUT_COMPLETION_INDEX_LAST, p_gui_input)) {
+			if (k->is_action("ui_end")) {
 				if (completion_index < completion_options.size() - 1) {
 					completion_index = completion_options.size() - 1;
 					completion_current = completion_options[completion_index];
@@ -2987,11 +2987,11 @@ void TextEdit::_gui_input(const Ref<InputEvent> &p_gui_input) {
 				}
 				event_accepted = true;
 			}
-			if (_match_builtin_shortcut(SHORTCUT_COMPLETION_CONFIRM, p_gui_input)) {
+			if (k->is_action("ui_accept")) {
 				_confirm_completion();
 				event_accepted = true;
 			}
-			if (_match_builtin_shortcut(SHORTCUT_COMPLETION_CANCEL, p_gui_input)) {
+			if (k->is_action("ui_cancel")) {
 				_cancel_completion();
 				event_accepted = true;
 			}
@@ -3013,21 +3013,21 @@ void TextEdit::_gui_input(const Ref<InputEvent> &p_gui_input) {
 
 		if (!readonly) {
 			// NEWLINES.
-			if (_match_builtin_shortcut(SHORTCUT_NEW_LINE_BELOW, p_gui_input)) {
-				_new_line(false);
-				event_accepted = true;
-			}
-			if (_match_builtin_shortcut(SHORTCUT_NEW_LINE_BELOW_SPLIT_CURRENT, p_gui_input)) {
+			if (k->is_action("ui_text_newline")) {
 				_new_line();
 				event_accepted = true;
 			}
-			if (_match_builtin_shortcut(SHORTCUT_NEW_LINE_ABOVE, p_gui_input)) {
+			if (k->is_action("ui_text_newline_blank")) {
+				_new_line(false);
+				event_accepted = true;
+			}
+			if (k->is_action("ui_text_newline_above")) {
 				_new_line(false, true);
 				event_accepted = true;
 			}
 
 			// INDENTATION.
-			if (_match_builtin_shortcut(SHORTCUT_INDENT, p_gui_input)) {
+			if (k->is_action("ui_text_indent")) {
 				if (is_selection_active()) {
 					indent_right();
 				} else {
@@ -3046,7 +3046,7 @@ void TextEdit::_gui_input(const Ref<InputEvent> &p_gui_input) {
 				}
 				event_accepted = true;
 			}
-			if (_match_builtin_shortcut(SHORTCUT_DEDENT, p_gui_input)) {
+			if (k->is_action("ui_text_dedent")) {
 				if (is_selection_active()) {
 					indent_left();
 				} else {
@@ -3089,7 +3089,7 @@ void TextEdit::_gui_input(const Ref<InputEvent> &p_gui_input) {
 			}
 
 			// BACKSPACE AND DELETE.
-			if (_match_builtin_shortcut(SHORTCUT_BACKSPACE, p_gui_input)) {
+			if (k->is_action("ui_text_backspace")) {
 				_backspace();
 
 				if (completion_active) {
@@ -3097,168 +3097,56 @@ void TextEdit::_gui_input(const Ref<InputEvent> &p_gui_input) {
 				}
 				event_accepted = true;
 			}
-			if (_match_builtin_shortcut(SHORTCUT_BACKSPACE_WORD, p_gui_input)) {
+			if (k->is_action("ui_text_backspace_word")) {
 				_backspace(true);
 				event_accepted = true;
 			}
-			if (_match_builtin_shortcut(SHORTCUT_BACKSPACE_ALL_TO_LEFT, p_gui_input)) {
+			if (k->is_action("ui_text_backspace_all_to_left")) {
 				_backspace(false, true);
 				event_accepted = true;
 			}
-			if (_match_builtin_shortcut(SHORTCUT_DELETE, p_gui_input)) {
+			if (k->is_action("ui_delete")) {
 				_delete();
 				event_accepted = true;
 			}
-			if (_match_builtin_shortcut(SHORTCUT_DELETE_WORD, p_gui_input)) {
+			if (k->is_action("ui_delete_word")) {
 				_delete(true);
 				event_accepted = true;
 			}
-			if (_match_builtin_shortcut(SHORTCUT_DELETE_ALL_TO_RIGHT, p_gui_input)) {
+			if (k->is_action("ui_delete_all_to_right")) {
 				_delete(false, true);
 				event_accepted = true;
 			}
 		}
 
-		// CURSOR MOVEMENT - LEFT, RIGHT.
-
-		if (_match_builtin_shortcut(SHORTCUT_CURSOR_LEFT, p_gui_input)) {
-			_move_cursor_left();
-			event_accepted = true;
-		}
-		if (_match_builtin_shortcut(SHORTCUT_CURSOR_WORD_LEFT, p_gui_input)) {
-			_move_cursor_left(false, true);
-			event_accepted = true;
-		}
-		if (_match_builtin_shortcut(SHORTCUT_CURSOR_SELECT_LEFT, p_gui_input)) {
-			_move_cursor_left(true, false);
-			event_accepted = true;
-		}
-		if (_match_builtin_shortcut(SHORTCUT_CURSOR_SELECT_WORD_LEFT, p_gui_input)) {
-			_move_cursor_left(true, true);
-			event_accepted = true;
-		}
-
-		if (_match_builtin_shortcut(SHORTCUT_CURSOR_RIGHT, p_gui_input)) {
-			_move_cursor_right();
-			event_accepted = true;
-		}
-		if (_match_builtin_shortcut(SHORTCUT_CURSOR_WORD_RIGHT, p_gui_input)) {
-			_move_cursor_right(false, true);
-			event_accepted = true;
-		}
-		if (_match_builtin_shortcut(SHORTCUT_CURSOR_SELECT_RIGHT, p_gui_input)) {
-			_move_cursor_right(true, false);
-			event_accepted = true;
-		}
-		if (_match_builtin_shortcut(SHORTCUT_CURSOR_SELECT_WORD_RIGHT, p_gui_input)) {
-			_move_cursor_right(true, true);
-			event_accepted = true;
-		}
-
-		// CURSOR MOVEMENT - UP, DOWN.
-
-		if (_match_builtin_shortcut(SHORTCUT_CURSOR_UP, p_gui_input)) {
-			_move_cursor_up();
-			event_accepted = true;
-		}
-		if (_match_builtin_shortcut(SHORTCUT_CURSOR_SELECT_UP, p_gui_input)) {
-			_move_cursor_up(true);
-			event_accepted = true;
-		}
-		if (_match_builtin_shortcut(SHORTCUT_CURSOR_DOWN, p_gui_input)) {
-			_move_cursor_down();
-			event_accepted = true;
-		}
-		if (_match_builtin_shortcut(SHORTCUT_CURSOR_SELECT_DOWN, p_gui_input)) {
-			_move_cursor_down(true);
-			event_accepted = true;
-		}
-
-		// CURSOR MOVEMENT - LINE START/END.
-
-		if (_match_builtin_shortcut(SHORTCUT_CURSOR_LINE_START, p_gui_input)) {
-			_move_cursor_to_line_start();
-			event_accepted = true;
-		}
-		if (_match_builtin_shortcut(SHORTCUT_CURSOR_LINE_END, p_gui_input)) {
-			_move_cursor_to_line_end();
-			event_accepted = true;
-		}
-		if (_match_builtin_shortcut(SHORTCUT_CURSOR_SELECT_LINE_START, p_gui_input)) {
-			_move_cursor_to_line_start(true);
-			event_accepted = true;
-		}
-		if (_match_builtin_shortcut(SHORTCUT_CURSOR_SELECT_LINE_END, p_gui_input)) {
-			_move_cursor_to_line_end(true);
-			event_accepted = true;
-		}
-
-		// CURSOR MOVEMENT - PAGE UP/DOWN.
-
-		if (_match_builtin_shortcut(SHORTCUT_CURSOR_PAGE_UP, p_gui_input)) {
-			_move_cursor_page_up();
-			event_accepted = true;
-		}
-		if (_match_builtin_shortcut(SHORTCUT_CURSOR_PAGE_DOWN, p_gui_input)) {
-			_move_cursor_page_down();
-			event_accepted = true;
-		}
-		if (_match_builtin_shortcut(SHORTCUT_CURSOR_SELECT_PAGE_UP, p_gui_input)) {
-			_move_cursor_page_up(true);
-			event_accepted = true;
-		}
-		if (_match_builtin_shortcut(SHORTCUT_CURSOR_SELECT_PAGE_DOWN, p_gui_input)) {
-			_move_cursor_page_down(true);
-			event_accepted = true;
-		}
-
-		// CURSOR MOVEMENT - DOCUMENT START/END.
-
-		if (_match_builtin_shortcut(SHORTCUT_CURSOR_DOCUMENT_START, p_gui_input)) {
-			_move_cursor_document_start();
-			event_accepted = true;
-		}
-		if (_match_builtin_shortcut(SHORTCUT_CURSOR_DOCUMENT_END, p_gui_input)) {
-			_move_cursor_document_end();
-			event_accepted = true;
-		}
-		if (_match_builtin_shortcut(SHORTCUT_CURSOR_SELECT_DOCUMENT_START, p_gui_input)) {
-			_move_cursor_document_start(true);
-			event_accepted = true;
-		}
-		if (_match_builtin_shortcut(SHORTCUT_CURSOR_SELECT_DOCUMENT_END, p_gui_input)) {
-			_move_cursor_document_end(true);
-			event_accepted = true;
-		}
-
 		// SCROLLING.
-		if (_match_builtin_shortcut(SHORTCUT_SCROLL_LINES_UP, p_gui_input)) {
+		if (k->is_action("ui_text_scroll_up")) {
 			_scroll_lines_up();
 			event_accepted = true;
 		}
-		if (_match_builtin_shortcut(SHORTCUT_SCROLL_LINES_DOWN, p_gui_input)) {
+		if (k->is_action("ui_text_scroll_down")) {
 			_scroll_lines_down();
 			event_accepted = true;
 		}
 
 		// SELECT ALL, CUT, COPY, PASTE.
 
-		if (_match_builtin_shortcut(SHORTCUT_SELECT_ALL, p_gui_input)) {
+		if (k->is_action("ui_text_select_all")) {
 			select_all();
 			event_accepted = true;
 		}
 
-		if (_match_builtin_shortcut(SHORTCUT_COPY, p_gui_input)) {
+		if (k->is_action("ui_copy")) {
 			copy();
 			event_accepted = true;
 		}
 
 		if (!readonly) {
-			if (_match_builtin_shortcut(SHORTCUT_CUT, p_gui_input)) {
+			if (k->is_action("ui_cut")) {
 				cut();
 				event_accepted = true;
 			}
-			if (_match_builtin_shortcut(SHORTCUT_PASTE, p_gui_input)) {
+			if (k->is_action("ui_paste")) {
 				paste();
 				event_accepted = true;
 			}
@@ -3266,18 +3154,18 @@ void TextEdit::_gui_input(const Ref<InputEvent> &p_gui_input) {
 
 		// UNDO/REDO.
 
-		if (_match_builtin_shortcut(SHORTCUT_UNDO, p_gui_input)) {
+		if (k->is_action("ui_undo")) {
 			undo();
 			event_accepted = true;
 		}
-		if (_match_builtin_shortcut(SHORTCUT_REDO, p_gui_input)) {
+		if (k->is_action("ui_redo")) {
 			redo();
 			event_accepted = true;
 		}
 
 		// MISC.
 
-		if (_match_builtin_shortcut(SHORTCUT_OPEN_CONTEXT_MENU, p_gui_input)) {
+		if (k->get_keycode() == KEY_MENU) {
 			if (context_menu_enabled) {
 				menu->set_position(get_global_transform().xform(_get_cursor_pixel_pos()));
 				menu->set_size(Vector2(1, 1));
@@ -3286,15 +3174,122 @@ void TextEdit::_gui_input(const Ref<InputEvent> &p_gui_input) {
 			}
 			event_accepted = true;
 		}
-		if (_match_builtin_shortcut(SHORTCUT_TOGGLE_INSERT_MODE, p_gui_input)) {
+		if (k->is_action("ui_text_toggle_insert_mode")) {
 			set_insert_mode(!insert_mode);
 			event_accepted = true;
 		}
-		if (_match_builtin_shortcut(SHORTCUT_COMPLETION_CLEAR_HINT, p_gui_input)) {
+		if (k->is_action("ui_cancel")) {
 			if (completion_hint != "") {
 				completion_hint = "";
 				update();
 			}
+			event_accepted = true;
+		}
+
+		// CURSOR MOVEMENT - LEFT, RIGHT.
+
+		k = k->duplicate();
+		bool shift_pressed = k->get_shift();
+		// Remove shift or else actions will not match. Use above variable for selection.
+		k->set_shift(false);
+
+		// SHIFTs must be checked first and be inside else if, otherwise selection will not occur.
+
+		if (k->is_action("ui_text_cursor_left") && shift_pressed) {
+			_move_cursor_left(true, false);
+			event_accepted = true;
+		} else if (k->is_action("ui_text_cursor_left")) {
+			_move_cursor_left();
+			event_accepted = true;
+		}
+		if (k->is_action("ui_text_cursor_word_left") && shift_pressed) {
+			_move_cursor_left(true, true);
+			event_accepted = true;
+		} else if (k->is_action("ui_text_cursor_word_left")) {
+			_move_cursor_left(false, true);
+			event_accepted = true;
+		}
+
+		if (k->is_action("ui_text_cursor_right") && shift_pressed) {
+			_move_cursor_right(true, false);
+			event_accepted = true;
+		} else if (k->is_action("ui_text_cursor_right")) {
+			_move_cursor_right();
+			event_accepted = true;
+		}
+		if (k->is_action("ui_text_cursor_word_right") && shift_pressed) {
+			_move_cursor_right(true, true);
+			event_accepted = true;
+		} else if (k->is_action("ui_text_cursor_word_right")) {
+			_move_cursor_right(false, true);
+			event_accepted = true;
+		}
+
+		// CURSOR MOVEMENT - UP, DOWN.
+
+		if (k->is_action("ui_text_cursor_up") && shift_pressed) {
+			_move_cursor_up(true);
+			event_accepted = true;
+		} else if (k->is_action("ui_text_cursor_up")) {
+			_move_cursor_up();
+			event_accepted = true;
+		}
+		if (k->is_action("ui_text_cursor_down") && shift_pressed) {
+			_move_cursor_down(true);
+			event_accepted = true;
+		} else if (k->is_action("ui_text_cursor_down")) {
+			_move_cursor_down();
+			event_accepted = true;
+		}
+
+		// CURSOR MOVEMENT - LINE START/END.
+
+		if (k->is_action("ui_text_cursor_line_start") && shift_pressed) {
+			_move_cursor_to_line_start(true);
+			event_accepted = true;
+		} else if (k->is_action("ui_text_cursor_line_start")) {
+			_move_cursor_to_line_start();
+			event_accepted = true;
+		}
+		if (k->is_action("ui_text_cursor_line_end") && shift_pressed) {
+			_move_cursor_to_line_end(true);
+			event_accepted = true;
+		} else if (k->is_action("ui_text_cursor_line_end")) {
+			_move_cursor_to_line_end();
+			event_accepted = true;
+		}
+
+		// CURSOR MOVEMENT - PAGE UP/DOWN.
+
+		if (k->is_action("ui_text_cursor_page_up") && shift_pressed) {
+			_move_cursor_page_up(true);
+			event_accepted = true;
+		} else if (k->is_action("ui_text_cursor_page_up")) {
+			_move_cursor_page_up();
+			event_accepted = true;
+		}
+		if (k->is_action("ui_text_cursor_page_down") && shift_pressed) {
+			_move_cursor_page_down(true);
+			event_accepted = true;
+		} else if (k->is_action("ui_text_cursor_page_down")) {
+			_move_cursor_page_down();
+			event_accepted = true;
+		}
+
+		// CURSOR MOVEMENT - DOCUMENT START/END.
+
+		if (k->is_action("ui_text_cursor_document_start") && shift_pressed) {
+			_move_cursor_document_start(true);
+			event_accepted = true;
+		} else if (k->is_action("ui_text_cursor_document_start")) {
+			_move_cursor_document_start();
+			event_accepted = true;
+		}
+		if (k->is_action("ui_text_cursor_document_end") && shift_pressed) {
+			_move_cursor_document_end(true);
+			event_accepted = true;
+		} else if (k->is_action("ui_text_cursor_document_end")) {
+			_move_cursor_document_end();
 			event_accepted = true;
 		}
 
@@ -6489,8 +6484,6 @@ void TextEdit::_bind_methods() {
 	ClassDB::bind_method(D_METHOD("set_minimap_width", "width"), &TextEdit::set_minimap_width);
 	ClassDB::bind_method(D_METHOD("get_minimap_width"), &TextEdit::get_minimap_width);
 
-	ClassDB::bind_method(D_METHOD("override_builtin_shortcut", "builtin_shortcut", "shortcut", "alt_shortcut1", "alt_shortcut2", "alt_shortcut3"), &TextEdit::override_builtin_shortcut, DEFVAL(Ref<Shortcut>()), DEFVAL(Ref<Shortcut>()), DEFVAL(Ref<Shortcut>()));
-
 	ADD_PROPERTY(PropertyInfo(Variant::STRING, "text", PROPERTY_HINT_MULTILINE_TEXT), "set_text", "get_text");
 	ADD_PROPERTY(PropertyInfo(Variant::BOOL, "readonly"), "set_readonly", "is_readonly");
 	ADD_PROPERTY(PropertyInfo(Variant::BOOL, "highlight_current_line"), "set_highlight_current_line", "is_highlight_current_line_enabled");
@@ -6540,24 +6533,10 @@ void TextEdit::_bind_methods() {
 	BIND_ENUM_CONSTANT(MENU_REDO);
 	BIND_ENUM_CONSTANT(MENU_MAX);
 
-	BIND_ENUM_CONSTANT(SHORTCUT_COMPLETION_QUERY);
-	BIND_ENUM_CONSTANT(SHORTCUT_SELECT_ALL);
-	BIND_ENUM_CONSTANT(SHORTCUT_CUT);
-	BIND_ENUM_CONSTANT(SHORTCUT_COPY);
-	BIND_ENUM_CONSTANT(SHORTCUT_PASTE);
-	BIND_ENUM_CONSTANT(SHORTCUT_UNDO);
-	BIND_ENUM_CONSTANT(SHORTCUT_REDO);
-
 	GLOBAL_DEF("gui/timers/text_edit_idle_detect_sec", 3);
 	ProjectSettings::get_singleton()->set_custom_property_info("gui/timers/text_edit_idle_detect_sec", PropertyInfo(Variant::FLOAT, "gui/timers/text_edit_idle_detect_sec", PROPERTY_HINT_RANGE, "0,10,0.01,or_greater")); // No negative numbers.
 	GLOBAL_DEF("gui/common/text_edit_undo_stack_max_size", 1024);
 	ProjectSettings::get_singleton()->set_custom_property_info("gui/common/text_edit_undo_stack_max_size", PropertyInfo(Variant::INT, "gui/common/text_edit_undo_stack_max_size", PROPERTY_HINT_RANGE, "0,10000,1,or_greater")); // No negative numbers.
-}
-
-void TextEdit::override_builtin_shortcut(BuiltInShortcut p_idx, Ref<Shortcut> p_shortcut, Ref<Shortcut> p_alt_shortcut1, Ref<Shortcut> p_alt_shortcut2, Ref<Shortcut> p_alt_shortcut3) {
-	ERR_FAIL_INDEX(int(p_idx), SHORTCUT_MAX);
-
-	_set_built_in_shortcut(p_idx, p_shortcut, p_alt_shortcut1, p_alt_shortcut2, p_alt_shortcut3);
 }
 
 TextEdit::TextEdit() {
@@ -6678,284 +6657,6 @@ TextEdit::TextEdit() {
 	set_readonly(false);
 	menu->connect("id_pressed", callable_mp(this, &TextEdit::menu_option));
 	first_draw = true;
-
-	///////////////////////// SET DEFAULT SHORTCUTS ///////////////////////////////
-
-	Ref<Shortcut> sc;
-	Ref<Shortcut> sc2;
-	Ref<Shortcut> sc3;
-
-	// *** AutoComplete ***
-#ifdef OSX_ENABLED
-	sc = Shortcut::create_reference(InputEventKey::create_reference(KEY_SPACE, KEY_MASK_META));
-#else
-	sc = Shortcut::create_reference(InputEventKey::create_reference(KEY_SPACE, KEY_MASK_CMD));
-#endif
-	_set_built_in_shortcut(SHORTCUT_COMPLETION_QUERY, sc);
-
-	sc = Shortcut::create_reference(InputEventKey::create_reference(KEY_UP));
-	_set_built_in_shortcut(SHORTCUT_COMPLETION_INDEX_UP, sc);
-
-	sc = Shortcut::create_reference(InputEventKey::create_reference(KEY_DOWN));
-	_set_built_in_shortcut(SHORTCUT_COMPLETION_INDEX_DOWN, sc);
-
-	sc = Shortcut::create_reference(InputEventKey::create_reference(KEY_PAGEUP));
-	_set_built_in_shortcut(SHORTCUT_COMPLETION_INDEX_PAGE_UP, sc);
-
-	sc = Shortcut::create_reference(InputEventKey::create_reference(KEY_PAGEDOWN));
-	_set_built_in_shortcut(SHORTCUT_COMPLETION_INDEX_PAGE_DOWN, sc);
-
-	sc = Shortcut::create_reference(InputEventKey::create_reference(KEY_HOME));
-	_set_built_in_shortcut(SHORTCUT_COMPLETION_INDEX_FIRST, sc);
-
-	sc = Shortcut::create_reference(InputEventKey::create_reference(KEY_END));
-	_set_built_in_shortcut(SHORTCUT_COMPLETION_INDEX_LAST, sc);
-
-	sc = Shortcut::create_reference(InputEventKey::create_reference(KEY_ENTER));
-	sc2 = Shortcut::create_reference(InputEventKey::create_reference(KEY_KP_ENTER));
-	sc3 = Shortcut::create_reference(InputEventKey::create_reference(KEY_TAB));
-	_set_built_in_shortcut(SHORTCUT_COMPLETION_CONFIRM, sc, sc2, sc3);
-
-	sc = Shortcut::create_reference(InputEventKey::create_reference(KEY_ESCAPE));
-	_set_built_in_shortcut(SHORTCUT_COMPLETION_CANCEL, sc);
-	_set_built_in_shortcut(SHORTCUT_COMPLETION_CLEAR_HINT, sc);
-
-	// *** Newlines ***
-
-	sc = Shortcut::create_reference(InputEventKey::create_reference(KEY_ENTER, KEY_MASK_CMD));
-	sc2 = Shortcut::create_reference(InputEventKey::create_reference(KEY_KP_ENTER, KEY_MASK_CMD));
-	_set_built_in_shortcut(SHORTCUT_NEW_LINE_BELOW, sc, sc2);
-
-	sc = Shortcut::create_reference(InputEventKey::create_reference(KEY_ENTER));
-	sc2 = Shortcut::create_reference(InputEventKey::create_reference(KEY_KP_ENTER));
-	_set_built_in_shortcut(SHORTCUT_NEW_LINE_BELOW_SPLIT_CURRENT, sc, sc2);
-
-	sc = Shortcut::create_reference(InputEventKey::create_reference(KEY_ENTER, KEY_MASK_SHIFT | KEY_MASK_CMD));
-	sc2 = Shortcut::create_reference(InputEventKey::create_reference(KEY_KP_ENTER, KEY_MASK_SHIFT | KEY_MASK_CMD));
-	_set_built_in_shortcut(SHORTCUT_NEW_LINE_ABOVE, sc, sc2);
-
-	// *** Indentation ***
-
-	sc = Shortcut::create_reference(InputEventKey::create_reference(KEY_TAB));
-	_set_built_in_shortcut(SHORTCUT_INDENT, sc);
-
-	sc = Shortcut::create_reference(InputEventKey::create_reference(KEY_TAB, KEY_MASK_SHIFT));
-	_set_built_in_shortcut(SHORTCUT_DEDENT, sc);
-
-	// *** Delete and Backspace ***
-
-	sc = Shortcut::create_reference(InputEventKey::create_reference(KEY_BACKSPACE));
-	_set_built_in_shortcut(SHORTCUT_BACKSPACE, sc);
-
-#ifdef APPLE_STYLE_KEYS
-	sc = Shortcut::create_reference(InputEventKey::create_reference(KEY_BACKSPACE, KEY_MASK_ALT));
-#else
-	sc = Shortcut::create_reference(InputEventKey::create_reference(KEY_BACKSPACE, KEY_MASK_CMD));
-#endif
-	_set_built_in_shortcut(SHORTCUT_BACKSPACE_WORD, sc);
-
-#ifdef APPLE_STYLE_KEYS
-	sc = Shortcut::create_reference(InputEventKey::create_reference(KEY_BACKSPACE, KEY_MASK_CMD));
-#else
-	sc = Ref<Shortcut>();
-#endif
-	_set_built_in_shortcut(SHORTCUT_BACKSPACE_ALL_TO_LEFT, sc);
-
-	sc = Shortcut::create_reference(InputEventKey::create_reference(KEY_DELETE));
-	_set_built_in_shortcut(SHORTCUT_DELETE, sc);
-
-#ifdef APPLE_STYLE_KEYS
-	sc = Shortcut::create_reference(InputEventKey::create_reference(KEY_DELETE, KEY_MASK_ALT));
-#else
-	sc = Shortcut::create_reference(InputEventKey::create_reference(KEY_DELETE, KEY_MASK_CMD));
-#endif
-	_set_built_in_shortcut(SHORTCUT_DELETE_WORD, sc);
-
-#ifdef APPLE_STYLE_KEYS
-	sc = Shortcut::create_reference(InputEventKey::create_reference(KEY_DELETE, KEY_MASK_CMD));
-#else
-	sc = Ref<Shortcut>();
-#endif
-	_set_built_in_shortcut(SHORTCUT_DELETE_ALL_TO_RIGHT, sc);
-
-	// *** Cursor Movement Left/Right ***
-	sc = Shortcut::create_reference(InputEventKey::create_reference(KEY_LEFT));
-	_set_built_in_shortcut(SHORTCUT_CURSOR_LEFT, sc);
-
-#ifdef APPLE_STYLE_KEYS
-	sc = Shortcut::create_reference(InputEventKey::create_reference(KEY_LEFT, KEY_MASK_ALT));
-#else
-	sc = Shortcut::create_reference(InputEventKey::create_reference(KEY_LEFT, KEY_MASK_CMD));
-#endif
-	_set_built_in_shortcut(SHORTCUT_CURSOR_WORD_LEFT, sc);
-
-	sc = Shortcut::create_reference(InputEventKey::create_reference(KEY_LEFT, KEY_MASK_SHIFT));
-	_set_built_in_shortcut(SHORTCUT_CURSOR_SELECT_LEFT, sc);
-
-#ifdef APPLE_STYLE_KEYS
-	sc = Shortcut::create_reference(InputEventKey::create_reference(KEY_LEFT, KEY_MASK_ALT | KEY_MASK_SHIFT));
-#else
-	sc = Shortcut::create_reference(InputEventKey::create_reference(KEY_LEFT, KEY_MASK_CMD | KEY_MASK_SHIFT));
-#endif
-	_set_built_in_shortcut(SHORTCUT_CURSOR_SELECT_WORD_LEFT, sc);
-
-	sc = Shortcut::create_reference(InputEventKey::create_reference(KEY_RIGHT));
-	_set_built_in_shortcut(SHORTCUT_CURSOR_RIGHT, sc);
-
-#ifdef APPLE_STYLE_KEYS
-	sc = Shortcut::create_reference(InputEventKey::create_reference(KEY_RIGHT, KEY_MASK_ALT));
-#else
-	sc = Shortcut::create_reference(InputEventKey::create_reference(KEY_RIGHT, KEY_MASK_CMD));
-#endif
-	_set_built_in_shortcut(SHORTCUT_CURSOR_WORD_RIGHT, sc);
-
-	sc = Shortcut::create_reference(InputEventKey::create_reference(KEY_RIGHT, KEY_MASK_SHIFT));
-	_set_built_in_shortcut(SHORTCUT_CURSOR_SELECT_RIGHT, sc);
-
-#ifdef APPLE_STYLE_KEYS
-	sc = Shortcut::create_reference(InputEventKey::create_reference(KEY_RIGHT, KEY_MASK_ALT | KEY_MASK_SHIFT));
-#else
-	sc = Shortcut::create_reference(InputEventKey::create_reference(KEY_RIGHT, KEY_MASK_CMD | KEY_MASK_SHIFT));
-#endif
-	_set_built_in_shortcut(SHORTCUT_CURSOR_SELECT_WORD_RIGHT, sc);
-
-	// *** Cursor movement up/down ***
-	sc = Shortcut::create_reference(InputEventKey::create_reference(KEY_UP));
-	_set_built_in_shortcut(SHORTCUT_CURSOR_UP, sc);
-
-	sc = Shortcut::create_reference(InputEventKey::create_reference(KEY_UP, KEY_MASK_SHIFT));
-	_set_built_in_shortcut(SHORTCUT_CURSOR_SELECT_UP, sc);
-
-	sc = Shortcut::create_reference(InputEventKey::create_reference(KEY_DOWN));
-	_set_built_in_shortcut(SHORTCUT_CURSOR_DOWN, sc);
-
-	sc = Shortcut::create_reference(InputEventKey::create_reference(KEY_DOWN, KEY_MASK_SHIFT));
-	_set_built_in_shortcut(SHORTCUT_CURSOR_SELECT_DOWN, sc);
-
-	// *** Cursor Movement Line start/end ***
-	sc = Shortcut::create_reference(InputEventKey::create_reference(KEY_HOME));
-#ifdef APPLE_STYLE_KEYS
-	sc2 = Shortcut::create_reference(InputEventKey::create_reference(KEY_A, KEY_MASK_CTRL));
-	sc3 = Shortcut::create_reference(InputEventKey::create_reference(KEY_LEFT, KEY_MASK_CMD));
-	_set_built_in_shortcut(SHORTCUT_CURSOR_LINE_START, sc, sc2, sc3);
-#else
-	_set_built_in_shortcut(SHORTCUT_CURSOR_LINE_START, sc);
-#endif
-
-	sc = Shortcut::create_reference(InputEventKey::create_reference(KEY_HOME | KEY_MASK_SHIFT));
-#ifdef APPLE_STYLE_KEYS
-	sc2 = Shortcut::create_reference(InputEventKey::create_reference(KEY_A, KEY_MASK_CTRL | KEY_MASK_SHIFT));
-	sc3 = Shortcut::create_reference(InputEventKey::create_reference(KEY_LEFT, KEY_MASK_CMD | KEY_MASK_SHIFT));
-	_set_built_in_shortcut(SHORTCUT_CURSOR_SELECT_LINE_START, sc, sc2, sc3);
-#else
-	_set_built_in_shortcut(SHORTCUT_CURSOR_SELECT_LINE_START, sc);
-#endif
-
-	sc = Shortcut::create_reference(InputEventKey::create_reference(KEY_END));
-#ifdef APPLE_STYLE_KEYS
-	sc2 = Shortcut::create_reference(InputEventKey::create_reference(KEY_E, KEY_MASK_CTRL));
-	sc3 = Shortcut::create_reference(InputEventKey::create_reference(KEY_RIGHT, KEY_MASK_CMD));
-	_set_built_in_shortcut(SHORTCUT_CURSOR_LINE_END, sc, sc2, sc3);
-#else
-	_set_built_in_shortcut(SHORTCUT_CURSOR_LINE_END, sc);
-#endif
-
-	sc = Shortcut::create_reference(InputEventKey::create_reference(KEY_END | KEY_MASK_SHIFT));
-#ifdef APPLE_STYLE_KEYS
-	sc2 = Shortcut::create_reference(InputEventKey::create_reference(KEY_E, KEY_MASK_CTRL | KEY_MASK_SHIFT));
-	sc3 = Shortcut::create_reference(InputEventKey::create_reference(KEY_RIGHT, KEY_MASK_CMD | KEY_MASK_SHIFT));
-	_set_built_in_shortcut(SHORTCUT_CURSOR_SELECT_LINE_END, sc, sc2, sc3);
-#else
-	_set_built_in_shortcut(SHORTCUT_CURSOR_SELECT_LINE_END, sc);
-#endif
-
-	// *** Cursor Movement Page up/down ***
-	sc = Shortcut::create_reference(InputEventKey::create_reference(KEY_PAGEUP));
-	_set_built_in_shortcut(SHORTCUT_CURSOR_PAGE_UP, sc);
-
-	sc = Shortcut::create_reference(InputEventKey::create_reference(KEY_PAGEUP, KEY_MASK_SHIFT));
-	_set_built_in_shortcut(SHORTCUT_CURSOR_SELECT_PAGE_UP, sc);
-
-	sc = Shortcut::create_reference(InputEventKey::create_reference(KEY_PAGEDOWN));
-	_set_built_in_shortcut(SHORTCUT_CURSOR_PAGE_DOWN, sc);
-
-	sc = Shortcut::create_reference(InputEventKey::create_reference(KEY_PAGEDOWN, KEY_MASK_SHIFT));
-	_set_built_in_shortcut(SHORTCUT_CURSOR_SELECT_PAGE_DOWN, sc);
-
-	// *** Cursor Movement document start/end ***
-#ifdef APPLE_STYLE_KEYS
-	sc = Shortcut::create_reference(InputEventKey::create_reference(KEY_UP, KEY_MASK_CMD));
-#else
-	sc = Shortcut::create_reference(InputEventKey::create_reference(KEY_HOME, KEY_MASK_CMD));
-#endif
-	_set_built_in_shortcut(SHORTCUT_CURSOR_DOCUMENT_START, sc);
-
-#ifdef APPLE_STYLE_KEYS
-	sc = Shortcut::create_reference(InputEventKey::create_reference(KEY_DOWN, KEY_MASK_CMD));
-#else
-	sc = Shortcut::create_reference(InputEventKey::create_reference(KEY_END, KEY_MASK_CMD));
-#endif
-	_set_built_in_shortcut(SHORTCUT_CURSOR_DOCUMENT_END, sc);
-
-#ifdef APPLE_STYLE_KEYS
-	sc = Shortcut::create_reference(InputEventKey::create_reference(KEY_UP, KEY_MASK_CMD | KEY_MASK_SHIFT));
-#else
-	sc = Shortcut::create_reference(InputEventKey::create_reference(KEY_HOME, KEY_MASK_CMD | KEY_MASK_SHIFT));
-#endif
-	_set_built_in_shortcut(SHORTCUT_CURSOR_SELECT_DOCUMENT_START, sc);
-
-#ifdef APPLE_STYLE_KEYS
-	sc = Shortcut::create_reference(InputEventKey::create_reference(KEY_DOWN, KEY_MASK_CMD | KEY_MASK_SHIFT));
-#else
-	sc = Shortcut::create_reference(InputEventKey::create_reference(KEY_END, KEY_MASK_CMD | KEY_MASK_SHIFT));
-#endif
-	_set_built_in_shortcut(SHORTCUT_CURSOR_SELECT_DOCUMENT_END, sc);
-
-	// *** Scrolling ***
-#ifdef APPLE_STYLE_KEYS
-	sc = Shortcut::create_reference(InputEventKey::create_reference(KEY_UP, KEY_MASK_CMD | KEY_MASK_ALT));
-#else
-	sc = Shortcut::create_reference(InputEventKey::create_reference(KEY_UP, KEY_MASK_CMD));
-#endif
-	_set_built_in_shortcut(SHORTCUT_SCROLL_LINES_UP, sc);
-
-#ifdef APPLE_STYLE_KEYS
-	sc = Shortcut::create_reference(InputEventKey::create_reference(KEY_DOWN, KEY_MASK_CMD | KEY_MASK_ALT));
-#else
-	sc = Shortcut::create_reference(InputEventKey::create_reference(KEY_DOWN, KEY_MASK_CMD));
-#endif
-	_set_built_in_shortcut(SHORTCUT_SCROLL_LINES_DOWN, sc);
-
-	// *** Select all, Cut, Copy, Paste ***
-	sc = Shortcut::create_reference(InputEventKey::create_reference(KEY_A, KEY_MASK_CMD));
-	_set_built_in_shortcut(SHORTCUT_SELECT_ALL, sc);
-
-	sc = Shortcut::create_reference(InputEventKey::create_reference(KEY_X, KEY_MASK_CMD));
-	sc2 = Shortcut::create_reference(InputEventKey::create_reference(KEY_DELETE, KEY_MASK_SHIFT));
-	_set_built_in_shortcut(SHORTCUT_CUT, sc, sc2);
-
-	sc = Shortcut::create_reference(InputEventKey::create_reference(KEY_C, KEY_MASK_CMD));
-	sc2 = Shortcut::create_reference(InputEventKey::create_reference(KEY_INSERT, KEY_MASK_CMD));
-	_set_built_in_shortcut(SHORTCUT_COPY, sc, sc2);
-
-	sc = Shortcut::create_reference(InputEventKey::create_reference(KEY_V, KEY_MASK_CMD));
-	sc2 = Shortcut::create_reference(InputEventKey::create_reference(KEY_INSERT, KEY_MASK_SHIFT));
-	_set_built_in_shortcut(SHORTCUT_PASTE, sc, sc2);
-
-	// *** Undo/Redo ***
-	sc = Shortcut::create_reference(InputEventKey::create_reference(KEY_Z, KEY_MASK_CMD));
-	_set_built_in_shortcut(SHORTCUT_UNDO, sc);
-
-	sc = Shortcut::create_reference(InputEventKey::create_reference(KEY_Y, KEY_MASK_CMD));
-	sc2 = Shortcut::create_reference(InputEventKey::create_reference(KEY_Z, KEY_MASK_CMD | KEY_MASK_SHIFT));
-	_set_built_in_shortcut(SHORTCUT_REDO, sc, sc2);
-
-	// *** Misc ***
-	sc = Shortcut::create_reference(InputEventKey::create_reference(KEY_MENU));
-	_set_built_in_shortcut(SHORTCUT_OPEN_CONTEXT_MENU, sc);
-
-	sc = Shortcut::create_reference(InputEventKey::create_reference(KEY_INSERT));
-	_set_built_in_shortcut(SHORTCUT_TOGGLE_INSERT_MODE, sc);
 }
 
 TextEdit::~TextEdit() {

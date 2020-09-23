@@ -64,14 +64,6 @@ public:
 		float activity;
 	};
 
-	enum BuiltInShortcut {
-		SHORTCUT_DUPLICATE,
-		SHORTCUT_COPY_NODES,
-		SHORTCUT_PASTE_NODES,
-		SHORTCUT_DELETE,
-		SHORTCUT_MAX
-	};
-
 private:
 	Button *zoom_minus;
 	Button *zoom_reset;
@@ -188,8 +180,6 @@ protected:
 	virtual bool clips_input() const override;
 
 public:
-	void override_builtin_shortcut(BuiltInShortcut p_idx, Ref<Shortcut> p_shortcut, Ref<Shortcut> p_alt_shortcut1 = Ref<Shortcut>(), Ref<Shortcut> p_alt_shortcut2 = Ref<Shortcut>(), Ref<Shortcut> p_alt_shortcut3 = Ref<Shortcut>());
-
 	Error connect_node(const StringName &p_from, int p_from_port, const StringName &p_to, int p_to_port);
 	bool is_node_connected(const StringName &p_from, int p_from_port, const StringName &p_to, int p_to_port);
 	void disconnect_node(const StringName &p_from, int p_from_port, const StringName &p_to, int p_to_port);
@@ -232,7 +222,5 @@ public:
 
 	GraphEdit();
 };
-
-VARIANT_ENUM_CAST(GraphEdit::BuiltInShortcut);
 
 #endif // GRAPHEdit_H

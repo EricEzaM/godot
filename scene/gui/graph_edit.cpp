@@ -52,12 +52,6 @@ GraphEditFilter::GraphEditFilter(GraphEdit *p_edit) {
 	ge = p_edit;
 }
 
-void GraphEdit::override_builtin_shortcut(BuiltInShortcut p_idx, Ref<Shortcut> p_shortcut, Ref<Shortcut> p_alt_shortcut1, Ref<Shortcut> p_alt_shortcut2, Ref<Shortcut> p_alt_shortcut3) {
-	ERR_FAIL_INDEX(int(p_idx), SHORTCUT_MAX);
-
-	_set_built_in_shortcut(p_idx, p_shortcut, p_alt_shortcut1, p_alt_shortcut2, p_alt_shortcut3);
-}
-
 Error GraphEdit::connect_node(const StringName &p_from, int p_from_port, const StringName &p_to, int p_to_port) {
 	if (is_node_connected(p_from, p_from_port, p_to, p_to_port)) {
 		return OK;
@@ -1038,16 +1032,16 @@ void GraphEdit::_gui_input(const Ref<InputEvent> &p_ev) {
 	}
 
 	if (p_ev->is_pressed()) {
-		if (_match_builtin_shortcut(SHORTCUT_DUPLICATE, p_ev)) {
+		if (p_ev->is_action("ui_graph_duplicate")) {
 			emit_signal("duplicate_nodes_request");
 			accept_event();
-		} else if (_match_builtin_shortcut(SHORTCUT_COPY_NODES, p_ev)) {
+		} else if (p_ev->is_action("ui_copy")) {
 			emit_signal("copy_nodes_request");
 			accept_event();
-		} else if (_match_builtin_shortcut(SHORTCUT_PASTE_NODES, p_ev)) {
+		} else if (p_ev->is_action("ui_paste")) {
 			emit_signal("paste_nodes_request");
 			accept_event();
-		} else if (_match_builtin_shortcut(SHORTCUT_DELETE, p_ev)) {
+		} else if (p_ev->is_action("ui_graph_delete")) {
 			emit_signal("delete_nodes_request");
 			accept_event();
 		}
@@ -1262,8 +1256,6 @@ void GraphEdit::_bind_methods() {
 
 	ClassDB::bind_method(D_METHOD("set_selected", "node"), &GraphEdit::set_selected);
 
-	ClassDB::bind_method(D_METHOD("override_builtin_shortcut", "builtin_shortcut", "shortcut", "alt_shortcut1", "alt_shortcut2", "alt_shortcut3"), &GraphEdit::override_builtin_shortcut, DEFVAL(Ref<Shortcut>()), DEFVAL(Ref<Shortcut>()), DEFVAL(Ref<Shortcut>()));
-
 	ADD_PROPERTY(PropertyInfo(Variant::BOOL, "right_disconnects"), "set_right_disconnects", "is_right_disconnects_enabled");
 	ADD_PROPERTY(PropertyInfo(Variant::VECTOR2, "scroll_offset"), "set_scroll_ofs", "get_scroll_ofs");
 	ADD_PROPERTY(PropertyInfo(Variant::INT, "snap_distance"), "set_snap", "get_snap");
@@ -1284,11 +1276,6 @@ void GraphEdit::_bind_methods() {
 	ADD_SIGNAL(MethodInfo("_begin_node_move"));
 	ADD_SIGNAL(MethodInfo("_end_node_move"));
 	ADD_SIGNAL(MethodInfo("scroll_offset_changed", PropertyInfo(Variant::VECTOR2, "ofs")));
-
-	BIND_ENUM_CONSTANT(SHORTCUT_DUPLICATE);
-	BIND_ENUM_CONSTANT(SHORTCUT_COPY_NODES);
-	BIND_ENUM_CONSTANT(SHORTCUT_PASTE_NODES);
-	BIND_ENUM_CONSTANT(SHORTCUT_DELETE);
 }
 
 GraphEdit::GraphEdit() {
@@ -1382,18 +1369,4 @@ GraphEdit::GraphEdit() {
 	setting_scroll_ofs = false;
 	just_disconnected = false;
 	set_clip_contents(true);
-
-	Ref<Shortcut> sc;
-
-	sc = Shortcut::create_reference(InputEventKey::create_reference(KEY_D, KEY_MASK_CMD));
-	_set_built_in_shortcut(SHORTCUT_DUPLICATE, sc);
-
-	sc = Shortcut::create_reference(InputEventKey::create_reference(KEY_C, KEY_MASK_CMD));
-	_set_built_in_shortcut(SHORTCUT_COPY_NODES, sc);
-
-	sc = Shortcut::create_reference(InputEventKey::create_reference(KEY_V, KEY_MASK_CMD));
-	_set_built_in_shortcut(SHORTCUT_PASTE_NODES, sc);
-
-	sc = Shortcut::create_reference(InputEventKey::create_reference(KEY_DELETE));
-	_set_built_in_shortcut(SHORTCUT_DELETE, sc);
 }

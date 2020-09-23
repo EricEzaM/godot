@@ -53,13 +53,6 @@ String Shortcut::get_as_text() const {
 	}
 }
 
-Ref<Shortcut> Shortcut::create_reference(const Ref<InputEvent> &p_shortcut) {
-	Ref<Shortcut> sc;
-	sc.instance();
-	sc->set_shortcut(p_shortcut);
-	return sc;
-}
-
 bool Shortcut::is_valid() const {
 	return shortcut.is_valid();
 }

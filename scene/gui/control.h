@@ -196,8 +196,6 @@ private:
 		HashMap<StringName, Color> color_override;
 		HashMap<StringName, int> constant_override;
 
-		HashMap<int, Vector<Ref<Shortcut>>> built_in_shortcuts;
-
 	} data;
 
 	// used internally
@@ -269,9 +267,6 @@ protected:
 	void _notification(int p_notification);
 
 	static void _bind_methods();
-
-	void _set_built_in_shortcut(const int &p_idx, const Ref<Shortcut> &p_shortcut, const Ref<Shortcut> &p_alt_shortcut1 = Ref<Shortcut>(), const Ref<Shortcut> &p_alt_shortcut2 = Ref<Shortcut>(), const Ref<Shortcut> &p_alt_shortcut3 = Ref<Shortcut>());
-	bool _match_builtin_shortcut(const int &p_idx, const Ref<InputEvent> &p_event) const;
 
 public:
 	enum {

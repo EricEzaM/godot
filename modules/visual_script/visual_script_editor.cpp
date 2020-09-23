@@ -4798,11 +4798,6 @@ VisualScriptEditor::VisualScriptEditor() {
 	graph->hide();
 	graph->connect("scroll_offset_changed", callable_mp(this, &VisualScriptEditor::_graph_ofs_changed));
 
-	graph->override_builtin_shortcut(GraphEdit::SHORTCUT_DELETE, ED_GET_SHORTCUT("visual_script_editor/delete_selected"));
-	graph->override_builtin_shortcut(GraphEdit::SHORTCUT_DUPLICATE, ED_GET_SHORTCUT("visual_script_editor/duplicate_nodes"));
-	graph->override_builtin_shortcut(GraphEdit::SHORTCUT_COPY_NODES, ED_GET_SHORTCUT("visual_script_editor/copy_nodes"));
-	graph->override_builtin_shortcut(GraphEdit::SHORTCUT_PASTE_NODES, ED_GET_SHORTCUT("visual_script_editor/paste_nodes"));
-
 	/// Add Buttons to Top Bar/Zoom bar.
 	HBoxContainer *graph_hbc = graph->get_zoom_hbox();
 
