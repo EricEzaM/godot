@@ -838,6 +838,14 @@ String InputEventJoypadButton::as_text() const {
 	return "InputEventJoypadButton : button_index=" + itos(button_index) + ", pressed=" + (pressed ? "true" : "false") + ", pressure=" + String(Variant(pressure));
 }
 
+Ref<InputEventJoypadButton> InputEventJoypadButton::create_reference(int p_btn_index) {
+	Ref<InputEventJoypadButton> ie;
+	ie.instance();
+	ie->set_button_index(p_btn_index);
+
+	return ie;
+}
+
 void InputEventJoypadButton::_bind_methods() {
 	ClassDB::bind_method(D_METHOD("set_button_index", "button_index"), &InputEventJoypadButton::set_button_index);
 	ClassDB::bind_method(D_METHOD("get_button_index"), &InputEventJoypadButton::get_button_index);

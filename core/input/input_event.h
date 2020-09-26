@@ -434,6 +434,8 @@ public:
 	virtual bool is_action_type() const override { return true; }
 	virtual String as_text() const override;
 
+	static Ref<InputEventJoypadButton> create_reference(int p_btn_index);
+
 	InputEventJoypadButton() {}
 };
 
