@@ -82,6 +82,7 @@ public:
 
 	const Map<StringName, Action> &get_action_map() const;
 	void load_from_globals();
+	Map<StringName, List<Ref<InputEvent>>> get_builtins();
 	void load_default();
 
 	InputMap();

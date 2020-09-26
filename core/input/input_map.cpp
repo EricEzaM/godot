@@ -244,284 +244,341 @@ void InputMap::load_from_globals() {
 	}
 }
 
+Map<StringName, List<Ref<InputEvent>>> InputMap::get_builtins() {
+	Map<StringName, List<Ref<InputEvent>>> map;
+
+	List<Ref<InputEvent>> inputs;
+	inputs.push_back(InputEventKey::create_reference(KEY_ENTER));
+	inputs.push_back(InputEventKey::create_reference(KEY_KP_ENTER));
+	inputs.push_back(InputEventKey::create_reference(KEY_SPACE));
+	map.insert("ui_accept", inputs);
+
+	inputs = List<Ref<InputEvent>>();
+	inputs.push_back(InputEventJoypadButton::create_reference(JOY_BUTTON_Y));
+	inputs.push_back(InputEventKey::create_reference(KEY_SPACE));
+	map.insert("ui_select", inputs);
+
+	inputs = List<Ref<InputEvent>>();
+	inputs.push_back(InputEventKey::create_reference(KEY_ESCAPE));
+	map.insert("ui_cancel", inputs);
+
+	inputs = List<Ref<InputEvent>>();
+	inputs.push_back(InputEventKey::create_reference(KEY_TAB));
+	map.insert("ui_focus_next", inputs);
+
+	inputs = List<Ref<InputEvent>>();
+	inputs.push_back(InputEventKey::create_reference(KEY_TAB, KEY_MASK_SHIFT));
+	map.insert("ui_focus_prev", inputs);
+
+	inputs = List<Ref<InputEvent>>();
+	inputs.push_back(InputEventKey::create_reference(KEY_ESCAPE));
+	map.insert("ui_left", inputs);
+
+	inputs = List<Ref<InputEvent>>();
+	inputs.push_back(InputEventKey::create_reference(KEY_LEFT));
+	inputs.push_back(InputEventJoypadButton::create_reference(JOY_BUTTON_DPAD_LEFT));
+	map.insert("ui_right", inputs);
+
+	inputs = List<Ref<InputEvent>>();
+	inputs.push_back(InputEventKey::create_reference(KEY_UP));
+	inputs.push_back(InputEventJoypadButton::create_reference(JOY_BUTTON_DPAD_UP));
+	map.insert("ui_up", inputs);
+
+	inputs = List<Ref<InputEvent>>();
+	inputs.push_back(InputEventKey::create_reference(KEY_DOWN));
+	inputs.push_back(InputEventJoypadButton::create_reference(JOY_BUTTON_DPAD_DOWN));
+	map.insert("ui_down", inputs);
+
+	inputs = List<Ref<InputEvent>>();
+	inputs.push_back(InputEventKey::create_reference(KEY_PAGEUP));
+	map.insert("ui_page_up", inputs);
+
+	inputs = List<Ref<InputEvent>>();
+	inputs.push_back(InputEventKey::create_reference(KEY_PAGEDOWN));
+	map.insert("ui_page_down", inputs);
+
+	inputs = List<Ref<InputEvent>>();
+	inputs.push_back(InputEventKey::create_reference(KEY_HOME));
+	map.insert("ui_home", inputs);
+
+	inputs = List<Ref<InputEvent>>();
+	inputs.push_back(InputEventKey::create_reference(KEY_END));
+	map.insert("ui_end", inputs);
+
+	// ///// UI basic Shortcuts /////
+
+	inputs = List<Ref<InputEvent>>();
+	inputs.push_back(InputEventKey::create_reference(KEY_X, KEY_MASK_CMD));
+	inputs.push_back(InputEventKey::create_reference(KEY_DELETE, KEY_MASK_SHIFT));
+	map.insert("ui_cut", inputs);
+
+	inputs = List<Ref<InputEvent>>();
+	inputs.push_back(InputEventKey::create_reference(KEY_C, KEY_MASK_CMD));
+	inputs.push_back(InputEventKey::create_reference(KEY_INSERT, KEY_MASK_CMD));
+	map.insert("ui_copy", inputs);
+
+	inputs = List<Ref<InputEvent>>();
+	inputs.push_back(InputEventKey::create_reference(KEY_V, KEY_MASK_CMD));
+	inputs.push_back(InputEventKey::create_reference(KEY_INSERT, KEY_MASK_SHIFT));
+	map.insert("ui_paste", inputs);
+
+	inputs = List<Ref<InputEvent>>();
+	inputs.push_back(InputEventKey::create_reference(KEY_Z, KEY_MASK_CMD));
+	map.insert("ui_undo", inputs);
+
+	inputs = List<Ref<InputEvent>>();
+	inputs.push_back(InputEventKey::create_reference(KEY_Y, KEY_MASK_CMD));
+	inputs.push_back(InputEventKey::create_reference(KEY_Z, KEY_MASK_CMD | KEY_MASK_SHIFT));
+	map.insert("ui_redo", inputs);
+
+	// ///// UI Text Input Shortcuts /////
+	inputs = List<Ref<InputEvent>>();
+	inputs.push_back(InputEventKey::create_reference(KEY_SPACE, KEY_MASK_CMD));
+	map.insert("ui_text_completion_query", inputs);
+
+	// Newlines
+	inputs = List<Ref<InputEvent>>();
+	inputs.push_back(InputEventKey::create_reference(KEY_ENTER));
+	inputs.push_back(InputEventKey::create_reference(KEY_KP_ENTER));
+	map.insert("ui_text_newline", inputs);
+
+	inputs = List<Ref<InputEvent>>();
+	inputs.push_back(InputEventKey::create_reference(KEY_ENTER, KEY_MASK_CMD));
+	inputs.push_back(InputEventKey::create_reference(KEY_KP_ENTER, KEY_MASK_CMD));
+	map.insert("ui_text_newline_blank", inputs);
+
+	inputs = List<Ref<InputEvent>>();
+	inputs.push_back(InputEventKey::create_reference(KEY_ENTER, KEY_MASK_SHIFT | KEY_MASK_CMD));
+	inputs.push_back(InputEventKey::create_reference(KEY_KP_ENTER, KEY_MASK_SHIFT | KEY_MASK_CMD));
+	map.insert("ui_text_newline_above", inputs);
+
+	// Indentation
+	inputs = List<Ref<InputEvent>>();
+	inputs.push_back(InputEventKey::create_reference(KEY_TAB));
+	map.insert("ui_text_indent", inputs);
+
+	inputs = List<Ref<InputEvent>>();
+	inputs.push_back(InputEventKey::create_reference(KEY_TAB, KEY_MASK_SHIFT));
+	map.insert("ui_text_dedent", inputs);
+
+	// Text Backspace and Delete
+	inputs = List<Ref<InputEvent>>();
+	inputs.push_back(InputEventKey::create_reference(KEY_BACKSPACE));
+	map.insert("ui_text_backspace", inputs);
+
+	inputs = List<Ref<InputEvent>>();
+	inputs.push_back(InputEventKey::create_reference(KEY_BACKSPACE, KEY_MASK_CMD));
+	map.insert("ui_text_backspace_word", inputs);
+
+	inputs = List<Ref<InputEvent>>();
+	inputs.push_back(InputEventKey::create_reference(KEY_BACKSPACE, KEY_MASK_ALT));
+	map.insert("ui_text_backspace_word.OSX", inputs);
+
+	inputs = List<Ref<InputEvent>>();
+	map.insert("ui_text_backspace_all_to_left", inputs);
+
+	inputs = List<Ref<InputEvent>>();
+	inputs.push_back(InputEventKey::create_reference(KEY_BACKSPACE, KEY_MASK_CMD));
+	map.insert("ui_text_backspace_all_to_left.OSX", inputs);
+
+	inputs = List<Ref<InputEvent>>();
+	inputs.push_back(InputEventKey::create_reference(KEY_DELETE));
+	map.insert("ui_text_delete", inputs);
+
+	inputs = List<Ref<InputEvent>>();
+	inputs.push_back(InputEventKey::create_reference(KEY_DELETE, KEY_MASK_CMD));
+	map.insert("ui_text_delete_word", inputs);
+
+	inputs = List<Ref<InputEvent>>();
+	inputs.push_back(InputEventKey::create_reference(KEY_DELETE, KEY_MASK_ALT));
+	map.insert("ui_text_delete_word.OSX", inputs);
+
+	inputs = List<Ref<InputEvent>>();
+	map.insert("ui_text_delete_all_to_right", inputs);
+
+	inputs = List<Ref<InputEvent>>();
+	inputs.push_back(InputEventKey::create_reference(KEY_DELETE, KEY_MASK_CMD));
+	map.insert("ui_text_delete_all_to_right.OSX", inputs);
+
+	// Text Caret Movement Left/Right
+
+	inputs = List<Ref<InputEvent>>();
+	inputs.push_back(InputEventKey::create_reference(KEY_LEFT));
+	map.insert("ui_text_caret_left", inputs);
+
+	inputs = List<Ref<InputEvent>>();
+	inputs.push_back(InputEventKey::create_reference(KEY_LEFT, KEY_MASK_CMD));
+	map.insert("ui_text_caret_word_left", inputs);
+
+	inputs = List<Ref<InputEvent>>();
+	inputs.push_back(InputEventKey::create_reference(KEY_LEFT, KEY_MASK_ALT));
+	map.insert("ui_text_caret_word_left.OSX", inputs);
+
+	inputs = List<Ref<InputEvent>>();
+	inputs.push_back(InputEventKey::create_reference(KEY_RIGHT));
+	map.insert("ui_text_caret_right", inputs);
+
+	inputs = List<Ref<InputEvent>>();
+	inputs.push_back(InputEventKey::create_reference(KEY_RIGHT, KEY_MASK_CMD));
+	map.insert("ui_text_caret_word_right", inputs);
+
+	inputs = List<Ref<InputEvent>>();
+	inputs.push_back(InputEventKey::create_reference(KEY_RIGHT, KEY_MASK_ALT));
+	map.insert("ui_text_caret_word_right.OSX", inputs);
+
+	// Text Caret Movement Up/Down
+
+	inputs = List<Ref<InputEvent>>();
+	inputs.push_back(InputEventKey::create_reference(KEY_UP));
+	map.insert("ui_text_caret_up", inputs);
+
+	inputs = List<Ref<InputEvent>>();
+	inputs.push_back(InputEventKey::create_reference(KEY_DOWN));
+	map.insert("ui_text_caret_down", inputs);
+
+	// Text Caret Movement Line Start/End
+
+	inputs = List<Ref<InputEvent>>();
+	inputs.push_back(InputEventKey::create_reference(KEY_HOME));
+	map.insert("ui_text_caret_line_start", inputs);
+
+	inputs = List<Ref<InputEvent>>();
+	inputs.push_back(InputEventKey::create_reference(KEY_A, KEY_MASK_CTRL));
+	inputs.push_back(InputEventKey::create_reference(KEY_LEFT, KEY_MASK_CMD));
+	map.insert("ui_text_caret_line_start.OSX", inputs);
+
+	inputs = List<Ref<InputEvent>>();
+	inputs.push_back(InputEventKey::create_reference(KEY_LEFT));
+	map.insert("ui_text_caret_line_end", inputs);
+
+	inputs = List<Ref<InputEvent>>();
+	inputs.push_back(InputEventKey::create_reference(KEY_E, KEY_MASK_CTRL));
+	inputs.push_back(InputEventKey::create_reference(KEY_RIGHT, KEY_MASK_CMD));
+	map.insert("ui_text_caret_line_end.OSX", inputs);
+
+	// Text Caret Movement Page Up/Down
+
+	inputs = List<Ref<InputEvent>>();
+	inputs.push_back(InputEventKey::create_reference(KEY_LEFT));
+	map.insert("ui_text_caret_page_up", inputs);
+
+	inputs = List<Ref<InputEvent>>();
+	inputs.push_back(InputEventKey::create_reference(KEY_LEFT));
+	map.insert("ui_text_caret_page_down", inputs);
+
+	// Text Caret Movement Document Start/End
+
+	inputs = List<Ref<InputEvent>>();
+	inputs.push_back(InputEventKey::create_reference(KEY_HOME, KEY_MASK_CMD));
+	map.insert("ui_text_caret_document_start", inputs);
+
+	inputs = List<Ref<InputEvent>>();
+	inputs.push_back(InputEventKey::create_reference(KEY_UP, KEY_MASK_CMD));
+	map.insert("ui_text_caret_document_start.OSX", inputs);
+
+	inputs = List<Ref<InputEvent>>();
+	inputs.push_back(InputEventKey::create_reference(KEY_END, KEY_MASK_CMD));
+	map.insert("ui_text_caret_document_end", inputs);
+
+	inputs = List<Ref<InputEvent>>();
+	inputs.push_back(InputEventKey::create_reference(KEY_DOWN, KEY_MASK_CMD));
+	map.insert("ui_text_caret_document_end.OSX", inputs);
+
+	// Text Scrolling
+
+	inputs = List<Ref<InputEvent>>();
+	inputs.push_back(InputEventKey::create_reference(KEY_UP, KEY_MASK_CMD));
+	map.insert("ui_text_scroll_up", inputs);
+
+	inputs = List<Ref<InputEvent>>();
+	inputs.push_back(InputEventKey::create_reference(KEY_UP, KEY_MASK_CMD | KEY_MASK_ALT));
+	map.insert("ui_text_scroll_up.OSX", inputs);
+
+	inputs = List<Ref<InputEvent>>();
+	inputs.push_back(InputEventKey::create_reference(KEY_DOWN, KEY_MASK_CMD));
+	map.insert("ui_text_scroll_down", inputs);
+
+	inputs = List<Ref<InputEvent>>();
+	inputs.push_back(InputEventKey::create_reference(KEY_DOWN, KEY_MASK_CMD | KEY_MASK_ALT));
+	map.insert("ui_text_scroll_down.OSX", inputs);
+
+	// Text Misc
+
+	inputs = List<Ref<InputEvent>>();
+	inputs.push_back(InputEventKey::create_reference(KEY_A, KEY_MASK_CMD));
+	map.insert("ui_text_select_all", inputs);
+
+	inputs = List<Ref<InputEvent>>();
+	inputs.push_back(InputEventKey::create_reference(KEY_INSERT));
+	map.insert("ui_text_toggle_insert_mode", inputs);
+
+	// ///// UI Graph Shortcuts /////
+
+	inputs = List<Ref<InputEvent>>();
+	inputs.push_back(InputEventKey::create_reference(KEY_D, KEY_MASK_CMD));
+	map.insert("ui_graph_duplicate", inputs);
+
+	inputs = List<Ref<InputEvent>>();
+	inputs.push_back(InputEventKey::create_reference(KEY_DELETE));
+	map.insert("ui_graph_duplicate", inputs);
+
+	// ///// UI File Dialog Shortcuts /////
+	inputs = List<Ref<InputEvent>>();
+	inputs.push_back(InputEventKey::create_reference(KEY_BACKSPACE));
+	map.insert("ui_filedialog_up_one_level", inputs);
+
+	inputs = List<Ref<InputEvent>>();
+	inputs.push_back(InputEventKey::create_reference(KEY_F5));
+	map.insert("ui_filedialog_refresh", inputs);
+
+	inputs = List<Ref<InputEvent>>();
+	inputs.push_back(InputEventKey::create_reference(KEY_H));
+	map.insert("ui_filedialog_show_hidden", inputs);
+
+	return map;
+}
+
 void InputMap::load_default() {
-	Ref<InputEventKey> key;
+	Map<StringName, List<Ref<InputEvent>>> builtins = get_builtins();
 
-	add_action("ui_accept");
-	key = InputEventKey::create_reference(KEY_ENTER);
-	action_add_event("ui_accept", key);
-	key = InputEventKey::create_reference(KEY_KP_ENTER);
-	action_add_event("ui_accept", key);
-	key = InputEventKey::create_reference(KEY_SPACE);
-	action_add_event("ui_accept", key);
+	// List of Builtins which have an override for OSX.
+	Vector<String> osx_builtins;
+	for (Map<StringName, List<Ref<InputEvent>>>::Element *E = builtins.front(); E; E = E->next()) {
+		if (String(E->key()).ends_with(".OSX")) {
+			// Strip .OSX from name: some_input_name.OSX -> some_input_name
+			osx_builtins.push_back(String(E->key()).split(".")[0]);
+		}
+	}
 
-	add_action("ui_select");
-	key = InputEventKey::create_reference(KEY_SPACE);
-	action_add_event("ui_select", key);
+	for (Map<StringName, List<Ref<InputEvent>>>::Element *E = builtins.front(); E; E = E->next()) {
+		String fullname = E->key();
+		String name = fullname.split(".")[0];
+		String override_for = fullname.split(".").size() > 1 ? fullname.split(".")[1] : "";
 
-	add_action("ui_cancel");
-	key = InputEventKey::create_reference(KEY_ESCAPE);
-	action_add_event("ui_cancel", key);
-
-	add_action("ui_focus_next");
-	key = InputEventKey::create_reference(KEY_TAB);
-	action_add_event("ui_focus_next", key);
-
-	add_action("ui_focus_prev");
-	key = InputEventKey::create_reference(KEY_TAB, KEY_MASK_SHIFT);
-	action_add_event("ui_focus_prev", key);
-
-	add_action("ui_left");
-	key = InputEventKey::create_reference(KEY_LEFT);
-	action_add_event("ui_left", key);
-
-	add_action("ui_right");
-	key = InputEventKey::create_reference(KEY_RIGHT);
-	action_add_event("ui_right", key);
-
-	add_action("ui_up");
-	key = InputEventKey::create_reference(KEY_UP);
-	action_add_event("ui_up", key);
-
-	add_action("ui_down");
-	key = InputEventKey::create_reference(KEY_DOWN);
-	action_add_event("ui_down", key);
-
-	add_action("ui_page_up");
-	key = InputEventKey::create_reference(KEY_PAGEUP);
-	action_add_event("ui_page_up", key);
-
-	add_action("ui_page_down");
-	key = InputEventKey::create_reference(KEY_PAGEDOWN);
-	action_add_event("ui_page_down", key);
-
-	add_action("ui_home");
-	key = InputEventKey::create_reference(KEY_HOME);
-	action_add_event("ui_home", key);
-
-	add_action("ui_end");
-	key = InputEventKey::create_reference(KEY_END);
-	action_add_event("ui_end", key);
-
-	//set("display/window/handheld/orientation", "landscape");
-
-	// Basics
-	add_action("ui_cut");
-	key = InputEventKey::create_reference(KEY_X, KEY_MASK_CMD);
-	action_add_event("ui_cut", key);
-	key = InputEventKey::create_reference(KEY_DELETE, KEY_MASK_SHIFT);
-	action_add_event("ui_cut", key);
-
-	add_action("ui_copy");
-	key = InputEventKey::create_reference(KEY_C, KEY_MASK_CMD);
-	action_add_event("ui_copy", key);
-	key = InputEventKey::create_reference(KEY_INSERT, KEY_MASK_CMD);
-	action_add_event("ui_copy", key);
-
-	add_action("ui_paste");
-	key = InputEventKey::create_reference(KEY_V, KEY_MASK_CMD);
-	action_add_event("ui_paste", key);
-	key = InputEventKey::create_reference(KEY_INSERT, KEY_MASK_SHIFT);
-	action_add_event("ui_paste", key);
-
-	add_action("ui_undo");
-	key = InputEventKey::create_reference(KEY_Z, KEY_MASK_CMD);
-	action_add_event("ui_undo", key);
-
-	add_action("ui_redo");
-	key = InputEventKey::create_reference(KEY_Y, KEY_MASK_CMD);
-	action_add_event("ui_redo", key);
-	key = InputEventKey::create_reference(KEY_Z, KEY_MASK_CMD | KEY_MASK_SHIFT);
-	action_add_event("ui_redo", key);
-
-	// Text
-	add_action("ui_text_completion_query");
-	key = InputEventKey::create_reference(KEY_SPACE, KEY_MASK_CMD);
-	action_add_event("ui_text_completion_query", key);
-
-	add_action("ui_text_newline");
-	key = InputEventKey::create_reference(KEY_ENTER);
-	action_add_event("ui_text_newline", key);
-	key = InputEventKey::create_reference(KEY_KP_ENTER);
-	action_add_event("ui_text_newline", key);
-
-	add_action("ui_text_newline_blank");
-	key = InputEventKey::create_reference(KEY_ENTER, KEY_MASK_CMD);
-	action_add_event("ui_text_newline_blank", key);
-	key = InputEventKey::create_reference(KEY_KP_ENTER, KEY_MASK_CMD);
-	action_add_event("ui_text_newline_blank", key);
-
-	add_action("ui_text_newline_above");
-	key = InputEventKey::create_reference(KEY_ENTER, KEY_MASK_SHIFT | KEY_MASK_CMD);
-	action_add_event("ui_text_newline_above", key);
-	key = InputEventKey::create_reference(KEY_KP_ENTER, KEY_MASK_SHIFT | KEY_MASK_CMD);
-	action_add_event("ui_text_newline_above", key);
-
-	add_action("ui_text_indent");
-	key = InputEventKey::create_reference(KEY_TAB);
-	action_add_event("ui_text_indent", key);
-
-	add_action("ui_text_dedent");
-	key = InputEventKey::create_reference(KEY_TAB, KEY_MASK_SHIFT);
-	action_add_event("ui_text_dedent", key);
-
-	add_action("ui_text_backspace");
-	key = InputEventKey::create_reference(KEY_BACKSPACE);
-	action_add_event("ui_text_backspace", key);
-
-	add_action("ui_text_backspace_word");
 #ifdef APPLE_STYLE_KEYS
-	key = InputEventKey::create_reference(KEY_BACKSPACE, KEY_MASK_ALT);
+		if (osx_builtins.has(name) && override_for != "OSX") {
+			// Name has osx builtin but this particular one is for non-osx systems - so skip.
+			continue;
+		}
 #else
-	key = InputEventKey::create_reference(KEY_BACKSPACE, KEY_MASK_CMD);
-#endif
-	action_add_event("ui_text_backspace_word", key);
-
-	add_action("ui_text_backspace_all_to_left");
-#ifdef APPLE_STYLE_KEYS
-	key = InputEventKey::create_reference(KEY_BACKSPACE, KEY_MASK_CMD);
-	action_add_event("ui_text_backspace_all_to_left", key);
+		if (override_for == "OSX") {
+			// Override for OSX - not needed on non-osx platforms.
+			continue;
+		}
 #endif
 
-	add_action("ui_text_delete");
-	key = InputEventKey::create_reference(KEY_DELETE);
-	action_add_event("ui_text_delete", key);
+		add_action(name); // TODO: Check if fullname needed here?
 
-	add_action("ui_text_delete_word");
-#ifdef APPLE_STYLE_KEYS
-	key = InputEventKey::create_reference(KEY_DELETE, KEY_MASK_ALT);
-#else
-	key = InputEventKey::create_reference(KEY_DELETE, KEY_MASK_CMD);
-#endif
-	action_add_event("ui_text_delete_word", key);
+		List<Ref<InputEvent>> inputs = E->get();
+		for (List<Ref<InputEvent>>::Element *I = inputs.front(); I; I = I->next()) {
+			Ref<InputEventKey> iek = I->get();
 
-	add_action("ui_text_delete_all_to_right");
-#ifdef APPLE_STYLE_KEYS
-	key = InputEventKey::create_reference(KEY_DELETE, KEY_MASK_CMD);
-	action_add_event("ui_text_delete_all_to_right", key);
-#endif
-
-	add_action("ui_text_cursor_left");
-	key = InputEventKey::create_reference(KEY_LEFT);
-	action_add_event("ui_text_cursor_left", key);
-
-	add_action("ui_text_cursor_word_left");
-#ifdef APPLE_STYLE_KEYS
-	key = InputEventKey::create_reference(KEY_LEFT, KEY_MASK_ALT);
-#else
-	key = InputEventKey::create_reference(KEY_LEFT, KEY_MASK_CMD);
-#endif
-	action_add_event("ui_text_cursor_word_left", key);
-
-	add_action("ui_text_cursor_right");
-	key = InputEventKey::create_reference(KEY_RIGHT);
-	action_add_event("ui_text_cursor_right", key);
-
-	add_action("ui_text_cursor_word_right");
-#ifdef APPLE_STYLE_KEYS
-	key = InputEventKey::create_reference(KEY_RIGHT, KEY_MASK_ALT);
-#else
-	key = InputEventKey::create_reference(KEY_RIGHT, KEY_MASK_CMD);
-#endif
-	action_add_event("ui_text_cursor_word_right", key);
-
-	add_action("ui_text_cursor_up");
-	key = InputEventKey::create_reference(KEY_UP);
-	action_add_event("ui_text_cursor_up", key);
-
-	add_action("ui_text_cursor_down");
-	key = InputEventKey::create_reference(KEY_DOWN);
-	action_add_event("ui_text_cursor_down", key);
-
-	add_action("ui_text_cursor_line_start");
-	key = InputEventKey::create_reference(KEY_HOME);
-	action_add_event("ui_text_cursor_line_start", key);
-#ifdef APPLE_STYLE_KEYS
-	key = InputEventKey::create_reference(KEY_A, KEY_MASK_CTRL);
-	action_add_event("ui_text_cursor_line_start", key);
-	key = InputEventKey::create_reference(KEY_LEFT, KEY_MASK_CMD);
-	action_add_event("ui_text_cursor_line_start", key);
-#endif
-
-	add_action("ui_text_cursor_line_end");
-	key = InputEventKey::create_reference(KEY_END);
-	action_add_event("ui_text_cursor_line_end", key);
-#ifdef APPLE_STYLE_KEYS
-	key = InputEventKey::create_reference(KEY_E, KEY_MASK_CTRL);
-	action_add_event("ui_text_cursor_line_end", key);
-	key = InputEventKey::create_reference(KEY_RIGHT, KEY_MASK_CMD);
-	action_add_event("ui_text_cursor_line_end", key);
-#endif
-
-	add_action("ui_text_cursor_page_up");
-	key = InputEventKey::create_reference(KEY_PAGEUP);
-	action_add_event("ui_text_cursor_page_up", key);
-
-	add_action("ui_text_cursor_page_down");
-	key = InputEventKey::create_reference(KEY_PAGEDOWN);
-	action_add_event("ui_text_cursor_page_down", key);
-
-	add_action("ui_text_cursor_document_start");
-#ifdef APPLE_STYLE_KEYS
-	key = InputEventKey::create_reference(KEY_UP, KEY_MASK_CMD);
-#else
-	key = InputEventKey::create_reference(KEY_HOME, KEY_MASK_CMD);
-#endif
-	action_add_event("ui_text_cursor_document_start", key);
-
-	add_action("ui_text_cursor_document_end");
-#ifdef APPLE_STYLE_KEYS
-	key = InputEventKey::create_reference(KEY_DOWN, KEY_MASK_CMD);
-#else
-	key = InputEventKey::create_reference(KEY_END, KEY_MASK_CMD);
-#endif
-	action_add_event("ui_text_cursor_document_end", key);
-
-	add_action("ui_text_scroll_up");
-#ifdef APPLE_STYLE_KEYS
-	key = InputEventKey::create_reference(KEY_UP, KEY_MASK_CMD | KEY_MASK_ALT);
-#else
-	key = InputEventKey::create_reference(KEY_UP, KEY_MASK_CMD);
-#endif
-	action_add_event("ui_text_scroll_up", key);
-
-	add_action("ui_text_scroll_down");
-#ifdef APPLE_STYLE_KEYS
-	key = InputEventKey::create_reference(KEY_DOWN, KEY_MASK_CMD | KEY_MASK_ALT);
-#else
-	key = InputEventKey::create_reference(KEY_DOWN, KEY_MASK_CMD);
-#endif
-	action_add_event("ui_text_scroll_down", key);
-
-	add_action("ui_text_select_all");
-	key = InputEventKey::create_reference(KEY_A, KEY_MASK_CMD);
-	action_add_event("ui_text_select_all", key);
-
-	add_action("ui_text_toggle_insert_mode");
-	key = InputEventKey::create_reference(KEY_INSERT);
-	action_add_event("ui_text_toggle_insert_mode", key);
-
-	// Graph
-	add_action("ui_graph_duplicate");
-	key = InputEventKey::create_reference(KEY_D, KEY_MASK_CMD);
-	action_add_event("ui_graph_duplicate", key);
-
-	add_action("ui_graph_delete");
-	key = InputEventKey::create_reference(KEY_DELETE);
-	action_add_event("ui_graph_delete", key);
-
-	// FileDialog
-	add_action("ui_filedialog_up_one_level");
-	key = InputEventKey::create_reference(KEY_BACKSPACE);
-	action_add_event("ui_filedialog_up_one_level", key);
-
-	add_action("ui_filedialog_refresh");
-	key = InputEventKey::create_reference(KEY_F5);
-	action_add_event("ui_filedialog_refresh", key);
-
-	add_action("ui_filedialog_show_hidden");
-	key = InputEventKey::create_reference(KEY_H);
-	action_add_event("ui_filedialog_show_hidden", key);
+			// For the editor, only add keyboard actions.
+			if (iek.is_valid()) {
+				action_add_event(fullname, I->get());
+			}
+		}
+	}
 }
 
 InputMap::InputMap() {
