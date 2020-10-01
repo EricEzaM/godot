@@ -3295,7 +3295,7 @@ void TextEdit::_gui_input(const Ref<InputEvent> &p_gui_input) {
 
 		if (event_accepted) {
 			accept_event();
-		} else if (!modifier_active && !readonly) {
+		} else if (!modifier_active && !readonly && k->get_unicode() >= 32) {
 			// Handle Unicode (if no modifiers active).
 			_handle_unicode_character(k->get_unicode(), had_selection, false);
 			accept_event();
