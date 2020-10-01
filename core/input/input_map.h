@@ -33,6 +33,7 @@
 
 #include "core/input/input_event.h"
 #include "core/object.h"
+#include "core/ordered_hash_map.h"
 
 class InputMap : public Object {
 	GDCLASS(InputMap, Object);
@@ -82,7 +83,9 @@ public:
 
 	const Map<StringName, Action> &get_action_map() const;
 	void load_from_globals();
-	Map<StringName, List<Ref<InputEvent>>> get_builtins();
+
+	// Use an Ordered Map so insertion order is preserved. We want the elements to be 'grouped' somewhat.
+	OrderedHashMap<StringName, List<Ref<InputEvent>>> get_builtins();
 	void load_default();
 
 	InputMap();

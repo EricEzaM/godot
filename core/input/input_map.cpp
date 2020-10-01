@@ -244,8 +244,8 @@ void InputMap::load_from_globals() {
 	}
 }
 
-Map<StringName, List<Ref<InputEvent>>> InputMap::get_builtins() {
-	Map<StringName, List<Ref<InputEvent>>> map;
+OrderedHashMap<StringName, List<Ref<InputEvent>>> InputMap::get_builtins() {
+	OrderedHashMap<StringName, List<Ref<InputEvent>>> map;
 
 	List<Ref<InputEvent>> inputs;
 	inputs.push_back(InputEventKey::create_reference(KEY_ENTER));
@@ -271,12 +271,13 @@ Map<StringName, List<Ref<InputEvent>>> InputMap::get_builtins() {
 	map.insert("ui_focus_prev", inputs);
 
 	inputs = List<Ref<InputEvent>>();
-	inputs.push_back(InputEventKey::create_reference(KEY_ESCAPE));
+	inputs.push_back(InputEventKey::create_reference(KEY_LEFT));
+	inputs.push_back(InputEventJoypadButton::create_reference(JOY_BUTTON_DPAD_LEFT));
 	map.insert("ui_left", inputs);
 
 	inputs = List<Ref<InputEvent>>();
-	inputs.push_back(InputEventKey::create_reference(KEY_LEFT));
-	inputs.push_back(InputEventJoypadButton::create_reference(JOY_BUTTON_DPAD_LEFT));
+	inputs.push_back(InputEventKey::create_reference(KEY_RIGHT));
+	inputs.push_back(InputEventJoypadButton::create_reference(JOY_BUTTON_DPAD_RIGHT));
 	map.insert("ui_right", inputs);
 
 	inputs = List<Ref<InputEvent>>();
@@ -448,7 +449,7 @@ Map<StringName, List<Ref<InputEvent>>> InputMap::get_builtins() {
 	map.insert("ui_text_caret_line_start.OSX", inputs);
 
 	inputs = List<Ref<InputEvent>>();
-	inputs.push_back(InputEventKey::create_reference(KEY_LEFT));
+	inputs.push_back(InputEventKey::create_reference(KEY_END));
 	map.insert("ui_text_caret_line_end", inputs);
 
 	inputs = List<Ref<InputEvent>>();
@@ -459,11 +460,11 @@ Map<StringName, List<Ref<InputEvent>>> InputMap::get_builtins() {
 	// Text Caret Movement Page Up/Down
 
 	inputs = List<Ref<InputEvent>>();
-	inputs.push_back(InputEventKey::create_reference(KEY_LEFT));
+	inputs.push_back(InputEventKey::create_reference(KEY_PAGEUP));
 	map.insert("ui_text_caret_page_up", inputs);
 
 	inputs = List<Ref<InputEvent>>();
-	inputs.push_back(InputEventKey::create_reference(KEY_LEFT));
+	inputs.push_back(InputEventKey::create_reference(KEY_PAGEDOWN));
 	map.insert("ui_text_caret_page_down", inputs);
 
 	// Text Caret Movement Document Start/End
@@ -520,7 +521,7 @@ Map<StringName, List<Ref<InputEvent>>> InputMap::get_builtins() {
 
 	inputs = List<Ref<InputEvent>>();
 	inputs.push_back(InputEventKey::create_reference(KEY_DELETE));
-	map.insert("ui_graph_duplicate", inputs);
+	map.insert("ui_graph_delete", inputs);
 
 	// ///// UI File Dialog Shortcuts /////
 	inputs = List<Ref<InputEvent>>();
@@ -539,19 +540,19 @@ Map<StringName, List<Ref<InputEvent>>> InputMap::get_builtins() {
 }
 
 void InputMap::load_default() {
-	Map<StringName, List<Ref<InputEvent>>> builtins = get_builtins();
+	OrderedHashMap<StringName, List<Ref<InputEvent>>> builtins = get_builtins();
 
 	// List of Builtins which have an override for OSX.
 	Vector<String> osx_builtins;
-	for (Map<StringName, List<Ref<InputEvent>>>::Element *E = builtins.front(); E; E = E->next()) {
-		if (String(E->key()).ends_with(".OSX")) {
+	for (OrderedHashMap<StringName, List<Ref<InputEvent>>>::Element E = builtins.front(); E; E = E.next()) {
+		if (String(E.key()).ends_with(".OSX")) {
 			// Strip .OSX from name: some_input_name.OSX -> some_input_name
-			osx_builtins.push_back(String(E->key()).split(".")[0]);
+			osx_builtins.push_back(String(E.key()).split(".")[0]);
 		}
 	}
 
-	for (Map<StringName, List<Ref<InputEvent>>>::Element *E = builtins.front(); E; E = E->next()) {
-		String fullname = E->key();
+	for (OrderedHashMap<StringName, List<Ref<InputEvent>>>::Element E = builtins.front(); E; E = E.next()) {
+		String fullname = E.key();
 		String name = fullname.split(".")[0];
 		String override_for = fullname.split(".").size() > 1 ? fullname.split(".")[1] : "";
 
@@ -569,7 +570,7 @@ void InputMap::load_default() {
 
 		add_action(name); // TODO: Check if fullname needed here?
 
-		List<Ref<InputEvent>> inputs = E->get();
+		List<Ref<InputEvent>> inputs = E.get();
 		for (List<Ref<InputEvent>>::Element *I = inputs.front(); I; I = I->next()) {
 			Ref<InputEventKey> iek = I->get();
 
