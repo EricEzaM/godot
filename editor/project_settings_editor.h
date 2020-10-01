@@ -40,17 +40,10 @@
 #include "editor/shader_globals_editor.h"
 #include "editor_autoload_settings.h"
 #include "scene/gui/tab_container.h"
+#include <editor\action_map_editor.h>
 
 class ProjectSettingsEditor : public AcceptDialog {
 	GDCLASS(ProjectSettingsEditor, AcceptDialog);
-
-	enum InputType {
-		INPUT_KEY,
-		INPUT_KEY_PHYSICAL,
-		INPUT_JOY_BUTTON,
-		INPUT_JOY_MOTION,
-		INPUT_MOUSE_BUTTON
-	};
 
 	static ProjectSettingsEditor *singleton;
 	ProjectSettings *ps;
@@ -58,12 +51,12 @@ class ProjectSettingsEditor : public AcceptDialog {
 
 	TabContainer *tab_container;
 	SectionedInspector *inspector;
-	InputMapEditor *inputmap_editor;
 	LocalizationEditor *localization_editor;
 	EditorAutoloadSettings *autoload_settings;
 	ShaderGlobalsEditor *shaders_global_variables_editor;
 	EditorPluginSettings *plugin_settings;
 
+	ActionMapEditor *action_map;
 	HBoxContainer *search_bar;
 	LineEdit *search_box;
 	CheckButton *advanced;
@@ -103,6 +96,13 @@ class ProjectSettingsEditor : public AcceptDialog {
 	void _editor_restart_close();
 
 	void _add_feature_overrides();
+
+	void _action_added(const String &p_name);
+	void _action_edited(const String &p_name, const Dictionary &p_action);
+	void _action_removed(const String &p_name);
+	void _action_renamed(const String &p_old_name, const String &p_new_name);
+	void _update_action_map_editor();
+
 	ProjectSettingsEditor();
 
 protected:
