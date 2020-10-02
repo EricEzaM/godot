@@ -82,7 +82,7 @@ public:
 	bool event_get_action_status(const Ref<InputEvent> &p_event, const StringName &p_action, bool *p_pressed = nullptr, float *p_strength = nullptr) const;
 
 	const Map<StringName, Action> &get_action_map() const;
-	void load_from_globals();
+	void load_from_project_settings();
 
 	// Use an Ordered Map so insertion order is preserved. We want the elements to be 'grouped' somewhat.
 	OrderedHashMap<StringName, List<Ref<InputEvent>>> get_builtins();
