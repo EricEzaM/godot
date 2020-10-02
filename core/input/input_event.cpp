@@ -255,16 +255,17 @@ void InputEventWithModifiers::_validate_property(PropertyInfo &property) const {
 		if (property.name == "meta") {
 			property.usage ^= PROPERTY_USAGE_STORAGE;
 		}
-#endif
+#else
 		// Don't store "Control".
 		if (property.name == "control") {
 			property.usage ^= PROPERTY_USAGE_STORAGE;
 		}
-	}
-
-	// We don't want to store command, only control or meta (on mac).
-	if (property.name == "command" && !store_command) {
-		property.usage ^= PROPERTY_USAGE_STORAGE;
+#endif
+	} else {
+		// We don't want to store command, only control or meta (on mac).
+		if (property.name == "command") {
+			property.usage ^= PROPERTY_USAGE_STORAGE;
+		}
 	}
 }
 
