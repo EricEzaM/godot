@@ -31,6 +31,7 @@
 #ifndef SETTINGS_CONFIG_DIALOG_H
 #define SETTINGS_CONFIG_DIALOG_H
 
+#include "editor/action_map_editor.h"
 #include "editor/editor_sectioned_inspector.h"
 #include "editor_inspector.h"
 #include "scene/gui/dialogs.h"
@@ -47,6 +48,7 @@ class EditorSettingsDialog : public AcceptDialog {
 	TabContainer *tabs;
 	Control *tab_general;
 	Control *tab_shortcuts;
+	ActionMapEditor *builtin_action_editor;
 
 	LineEdit *search_box;
 	LineEdit *shortcut_search_box;
@@ -80,9 +82,6 @@ class EditorSettingsDialog : public AcceptDialog {
 	void _tabs_tab_changed(int p_tab);
 	void _focus_current_search_box();
 
-	void _clear_shortcut_search_box();
-	void _clear_search_box();
-
 	void _filter_shortcuts(const String &p_filter);
 
 	void _update_shortcuts();
@@ -106,6 +105,8 @@ public:
 	void popup_edit_settings();
 
 	EditorSettingsDialog();
+	void _action_edited(const String &p_name, const Dictionary &p_action);
+	void _update_action_map_editor();
 	~EditorSettingsDialog();
 };
 

@@ -1043,8 +1043,8 @@ void ProjectSettings::_bind_methods() {
 void ProjectSettings::_add_builtin_input_map() {
 	Array events;
 
-	OrderedHashMap<StringName, List<Ref<InputEvent>>> builtins = InputMap::get_singleton()->get_builtins();
-	for (OrderedHashMap<StringName, List<Ref<InputEvent>>>::Element E = builtins.front(); E; E = E.next()) {
+	OrderedHashMap<String, List<Ref<InputEvent>>> builtins = InputMap::get_singleton()->get_builtins();
+	for (OrderedHashMap<String, List<Ref<InputEvent>>>::Element E = builtins.front(); E; E = E.next()) {
 		Array events;
 
 		// Convert list of input events into array
