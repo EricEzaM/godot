@@ -38,13 +38,15 @@
 class InputEventConfigurationDialog : public ConfirmationDialog {
 	GDCLASS(InputEventConfigurationDialog, ConfirmationDialog);
 
+public:
 	enum InputType {
-		INPUT_KEY,
-		INPUT_MOUSE_BUTTON,
-		INPUT_JOY_BUTTON,
-		INPUT_JOY_MOTION
+		INPUT_KEY = 1,
+		INPUT_MOUSE_BUTTON = 2,
+		INPUT_JOY_BUTTON = 4,
+		INPUT_JOY_MOTION = 8
 	};
 
+private:
 	struct IconCache {
 		Ref<Texture2D> keyboard;
 		Ref<Texture2D> mouse;
@@ -61,6 +63,7 @@ class InputEventConfigurationDialog : public ConfirmationDialog {
 
 	// List of All Key/Mouse/Joypad input options.
 
+	int allowed_input_types;
 	Tree *input_list_tree;
 	LineEdit *input_list_search;
 
@@ -102,6 +105,8 @@ public:
 	// Pass an existing event to configure it. Alternatively, pass no event to start with a blank configuration.
 	void popup_and_configure(const Ref<InputEvent> &p_event = Ref<InputEvent>());
 	Ref<InputEvent> get_event() const;
+
+	void set_allowed_input_types(int p_type_masks);
 
 	InputEventConfigurationDialog();
 };
@@ -164,8 +169,11 @@ protected:
 	static void _bind_methods();
 
 public:
+	LineEdit *get_search_box() const;
+	InputEventConfigurationDialog *get_configuration_dialog();
+
 	// Dictionary represents an Action with "events" (Array) and "deadzone" (float) items. Pass with no param to update list from cached action map.
-	void update_action_list(const Vector<ActionInfo> &p_actions = Vector<ActionInfo>());
+	void update_action_list(const Vector<ActionInfo> &p_action_infos = Vector<ActionInfo>());
 	void show_message(const String &p_message);
 
 	void set_show_uneditable(bool p_show);

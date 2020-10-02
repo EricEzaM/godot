@@ -111,7 +111,17 @@ void InputEventConfigurationDialog::_listen_window_input(const Ref<InputEvent> &
 		return;
 	}
 
+	// Check what the type is and if it is allowed.
+	Ref<InputEventKey> k = p_event;
+	Ref<InputEventJoypadButton> joyb = p_event;
 	Ref<InputEventJoypadMotion> joym = p_event;
+
+	int type = k.is_valid() ? INPUT_KEY : joyb.is_valid() ? INPUT_JOY_BUTTON : joym.is_valid() ? INPUT_JOY_MOTION : 0;
+
+	if (!(allowed_input_types & type)) {
+		return;
+	}
+
 	if (joym.is_valid()) {
 		float axis_value = joym->get_axis_value();
 		if (ABS(axis_value) < 0.9) {
@@ -123,8 +133,8 @@ void InputEventConfigurationDialog::_listen_window_input(const Ref<InputEvent> &
 		}
 	}
 
-	Ref<InputEventKey> k = p_event;
 	if (k.is_valid()) {
+		k->set_pressed(false); // to avoid serialisation of 'pressed' property - doesn't matter for actions anyway.
 		// Maintain physical keycode option state
 		if (physical_key_checkbox->is_pressed()) {
 			k->set_physical_keycode(k->get_keycode());
@@ -139,6 +149,8 @@ void InputEventConfigurationDialog::_listen_window_input(const Ref<InputEvent> &
 	if (mod.is_valid()) {
 		// Maintain store command option state
 		mod->set_store_command(store_command_checkbox->is_pressed());
+
+		mod->set_window_id(0);
 	}
 
 	_set_event(p_event);
@@ -155,94 +167,101 @@ void InputEventConfigurationDialog::_update_input_list() {
 	TreeItem *root = input_list_tree->create_item();
 	String search_term = input_list_search->get_text();
 
-	TreeItem *kb_root = input_list_tree->create_item(root);
-	kb_root->set_text(0, TTR("Keyboard Keys"));
-	kb_root->set_icon(0, icon_cache.keyboard);
-
-	for (int i = 0; i < keycode_get_count(); i++) {
-		String name = keycode_get_name_by_index(i);
-
-		if (!search_term.empty() && name.findn(search_term) == -1) {
-			continue;
-		}
-
-		TreeItem *item = input_list_tree->create_item(kb_root);
-		item->set_text(0, name);
-		item->set_meta("__type", INPUT_KEY);
-		item->set_meta("__keycode", keycode_get_value_by_index(i));
-	}
-
-	TreeItem *mouse_root = input_list_tree->create_item(root);
-	mouse_root->set_text(0, TTR("Mouse Buttons"));
-	mouse_root->set_icon(0, icon_cache.mouse);
-	int mouse_buttons[9] = { BUTTON_LEFT, BUTTON_RIGHT, BUTTON_MIDDLE, BUTTON_WHEEL_UP, BUTTON_WHEEL_DOWN, BUTTON_WHEEL_LEFT, BUTTON_WHEEL_RIGHT, BUTTON_XBUTTON1, BUTTON_XBUTTON2 };
-
-	for (int i = 0; i < 9; i++) {
-		Ref<InputEventMouseButton> mb;
-		mb.instance();
-		mb->set_button_index(mouse_buttons[i]);
-		String desc = mb->as_text();
-
-		if (!search_term.empty() && desc.findn(search_term) == -1) {
-			continue;
-		}
-
-		TreeItem *item = input_list_tree->create_item(mouse_root);
-		item->set_text(0, desc);
-		item->set_meta("__type", INPUT_MOUSE_BUTTON);
-		item->set_meta("__index", mouse_buttons[i]);
-	}
-
-	TreeItem *joyb_root = input_list_tree->create_item(root);
-	joyb_root->set_text(0, TTR("Joypad Buttons"));
-	joyb_root->set_icon(0, icon_cache.joypad_button);
-
-	for (int i = 0; i < JOY_BUTTON_MAX; i++) {
-		Ref<InputEventJoypadButton> joyb;
-		joyb.instance();
-		joyb->set_button_index(i);
-		String desc = joyb->as_text();
-
-		if (!search_term.empty() && desc.findn(search_term) == -1) {
-			continue;
-		}
-
-		TreeItem *item = input_list_tree->create_item(joyb_root);
-		item->set_text(0, desc);
-		item->set_meta("__type", INPUT_JOY_BUTTON);
-		item->set_meta("__index", i);
-	}
-
-	TreeItem *joya_root = input_list_tree->create_item(root);
-	joya_root->set_text(0, TTR("Joypad Axes"));
-	joya_root->set_icon(0, icon_cache.joypad_axis);
-
-	for (int i = 0; i < JOY_AXIS_MAX * 2; i++) {
-		int axis = i / 2;
-		int direction = (i & 1) ? 1 : -1;
-		Ref<InputEventJoypadMotion> joym;
-		joym.instance();
-		joym->set_axis(axis);
-		joym->set_axis_value(direction);
-		String desc = joym->as_text();
-
-		if (!search_term.empty() && desc.findn(search_term) == -1) {
-			continue;
-		}
-
-		TreeItem *item = input_list_tree->create_item(joya_root);
-		item->set_text(0, desc);
-		item->set_meta("__type", INPUT_JOY_MOTION);
-		item->set_meta("__axis", i >> 1);
-		item->set_meta("__value", (i & 1) ? 1 : -1);
-	}
-
 	bool collapse = input_list_search->get_text().empty();
 
-	kb_root->set_collapsed(collapse);
-	mouse_root->set_collapsed(collapse);
-	joyb_root->set_collapsed(collapse);
-	joya_root->set_collapsed(collapse);
+	if (allowed_input_types & INPUT_KEY) {
+		TreeItem *kb_root = input_list_tree->create_item(root);
+		kb_root->set_text(0, TTR("Keyboard Keys"));
+		kb_root->set_icon(0, icon_cache.keyboard);
+		kb_root->set_collapsed(collapse);
+
+		for (int i = 0; i < keycode_get_count(); i++) {
+			String name = keycode_get_name_by_index(i);
+
+			if (!search_term.empty() && name.findn(search_term) == -1) {
+				continue;
+			}
+
+			TreeItem *item = input_list_tree->create_item(kb_root);
+			item->set_text(0, name);
+			item->set_meta("__type", INPUT_KEY);
+			item->set_meta("__keycode", keycode_get_value_by_index(i));
+		}
+	}
+
+	if (allowed_input_types & INPUT_MOUSE_BUTTON) {
+		TreeItem *mouse_root = input_list_tree->create_item(root);
+		mouse_root->set_text(0, TTR("Mouse Buttons"));
+		mouse_root->set_icon(0, icon_cache.mouse);
+		mouse_root->set_collapsed(collapse);
+
+		int mouse_buttons[9] = { BUTTON_LEFT, BUTTON_RIGHT, BUTTON_MIDDLE, BUTTON_WHEEL_UP, BUTTON_WHEEL_DOWN, BUTTON_WHEEL_LEFT, BUTTON_WHEEL_RIGHT, BUTTON_XBUTTON1, BUTTON_XBUTTON2 };
+		for (int i = 0; i < 9; i++) {
+			Ref<InputEventMouseButton> mb;
+			mb.instance();
+			mb->set_button_index(mouse_buttons[i]);
+			String desc = mb->as_text();
+
+			if (!search_term.empty() && desc.findn(search_term) == -1) {
+				continue;
+			}
+
+			TreeItem *item = input_list_tree->create_item(mouse_root);
+			item->set_text(0, desc);
+			item->set_meta("__type", INPUT_MOUSE_BUTTON);
+			item->set_meta("__index", mouse_buttons[i]);
+		}
+	}
+
+	if (allowed_input_types & INPUT_JOY_BUTTON) {
+		TreeItem *joyb_root = input_list_tree->create_item(root);
+		joyb_root->set_text(0, TTR("Joypad Buttons"));
+		joyb_root->set_icon(0, icon_cache.joypad_button);
+		joyb_root->set_collapsed(collapse);
+
+		for (int i = 0; i < JOY_BUTTON_MAX; i++) {
+			Ref<InputEventJoypadButton> joyb;
+			joyb.instance();
+			joyb->set_button_index(i);
+			String desc = joyb->as_text();
+
+			if (!search_term.empty() && desc.findn(search_term) == -1) {
+				continue;
+			}
+
+			TreeItem *item = input_list_tree->create_item(joyb_root);
+			item->set_text(0, desc);
+			item->set_meta("__type", INPUT_JOY_BUTTON);
+			item->set_meta("__index", i);
+		}
+	}
+
+	if (allowed_input_types & INPUT_JOY_MOTION) {
+		TreeItem *joya_root = input_list_tree->create_item(root);
+		joya_root->set_text(0, TTR("Joypad Axes"));
+		joya_root->set_icon(0, icon_cache.joypad_axis);
+		joya_root->set_collapsed(collapse);
+
+		for (int i = 0; i < JOY_AXIS_MAX * 2; i++) {
+			int axis = i / 2;
+			int direction = (i & 1) ? 1 : -1;
+			Ref<InputEventJoypadMotion> joym;
+			joym.instance();
+			joym->set_axis(axis);
+			joym->set_axis_value(direction);
+			String desc = joym->as_text();
+
+			if (!search_term.empty() && desc.findn(search_term) == -1) {
+				continue;
+			}
+
+			TreeItem *item = input_list_tree->create_item(joya_root);
+			item->set_text(0, desc);
+			item->set_meta("__type", INPUT_JOY_MOTION);
+			item->set_meta("__axis", i >> 1);
+			item->set_meta("__value", (i & 1) ? 1 : -1);
+		}
+	}
 }
 
 void InputEventConfigurationDialog::_mod_toggled(bool p_checked, int p_index) {
@@ -440,7 +459,13 @@ Ref<InputEvent> InputEventConfigurationDialog::get_event() const {
 	return event;
 }
 
+void InputEventConfigurationDialog::set_allowed_input_types(int p_type_masks) {
+	allowed_input_types = p_type_masks;
+}
+
 InputEventConfigurationDialog::InputEventConfigurationDialog() {
+	allowed_input_types = INPUT_KEY | INPUT_MOUSE_BUTTON | INPUT_JOY_BUTTON | INPUT_JOY_MOTION;
+
 	set_title("Event Configuration");
 	set_min_size(Size2i(400 * EDSCALE, 0)); // Min width
 
@@ -639,6 +664,9 @@ void ActionMapEditor::_action_button_pressed(Object *p_item, int p_column, int p
 	ItemButton option = (ItemButton)p_id;
 
 	TreeItem *item = Object::cast_to<TreeItem>(p_item);
+	if (!item) {
+		return;
+	}
 
 	switch (option) {
 		case ActionMapEditor::BUTTON_ADD_EVENT: {
@@ -692,7 +720,11 @@ void ActionMapEditor::_action_button_pressed(Object *p_item, int p_column, int p
 void ActionMapEditor::set_show_uneditable(bool p_show) {
 	show_uneditable = p_show;
 	show_uneditable_actions_checkbox->set_pressed(p_show);
-	update_action_list();
+
+	// Prevent unnecessary updates of action list when cache is empty.
+	if (!actions_cache.empty()) {
+		update_action_list();
+	}
 }
 
 void ActionMapEditor::_search_term_updated(const String &) {
@@ -712,16 +744,30 @@ void ActionMapEditor::_bind_methods() {
 	ADD_SIGNAL(MethodInfo("action_renamed", PropertyInfo(Variant::STRING, "old_name"), PropertyInfo(Variant::STRING, "new_name")));
 }
 
-void ActionMapEditor::update_action_list(const Vector<ActionInfo> &p_action_map) {
-	if (!p_action_map.empty()) {
-		actions_cache = p_action_map;
+LineEdit *ActionMapEditor::get_search_box() const {
+	return action_list_search;
+}
+
+InputEventConfigurationDialog *ActionMapEditor::get_configuration_dialog() {
+	return event_config_dialog;
+}
+
+void ActionMapEditor::update_action_list(const Vector<ActionInfo> &p_action_infos) {
+	if (!p_action_infos.empty()) {
+		actions_cache = p_action_infos;
 	}
 
 	action_tree->clear();
 	TreeItem *root = action_tree->create_item();
 
+	int uneditable_count = 0;
+
 	for (int i = 0; i < actions_cache.size(); i++) {
 		ActionInfo action_info = actions_cache[i];
+
+		if (!action_info.editable) {
+			uneditable_count++;
+		}
 
 		String search_term = action_list_search->get_text();
 		if (!search_term.empty() && action_info.name.findn(search_term) == -1) {
@@ -777,6 +823,13 @@ void ActionMapEditor::update_action_list(const Vector<ActionInfo> &p_action_map)
 			event_item->set_button_color(2, 0, Color(1, 1, 1, 0.75));
 			event_item->set_button_color(2, 1, Color(1, 1, 1, 0.75));
 		}
+	}
+
+	// If all actions are uneditable, or none of them are, then we don't need to show the checkbox to toggle them.
+	if (uneditable_count == 0 || uneditable_count == p_action_infos.size()) {
+		show_uneditable_actions_checkbox->hide();
+	} else {
+		show_uneditable_actions_checkbox->show();
 	}
 }
 
