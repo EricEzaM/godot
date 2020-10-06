@@ -3105,15 +3105,15 @@ void TextEdit::_gui_input(const Ref<InputEvent> &p_gui_input) {
 				_backspace(false, true);
 				event_accepted = true;
 			}
-			if (k->is_action("ui_delete")) {
+			if (k->is_action("ui_text_delete")) {
 				_delete();
 				event_accepted = true;
 			}
-			if (k->is_action("ui_delete_word")) {
+			if (k->is_action("ui_text_delete_word")) {
 				_delete(true);
 				event_accepted = true;
 			}
-			if (k->is_action("ui_delete_all_to_right")) {
+			if (k->is_action("ui_text_delete_all_to_right")) {
 				_delete(false, true);
 				event_accepted = true;
 			}

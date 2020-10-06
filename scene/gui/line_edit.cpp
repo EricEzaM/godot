@@ -351,16 +351,16 @@ void LineEdit::_gui_input(Ref<InputEvent> p_event) {
 				event_accepted = true;
 			}
 
-			if (k->is_action("ui_delete")) {
+			if (k->is_action("ui_text_delete")) {
 				_delete();
 				event_accepted = true;
 			}
-			if (k->is_action("ui_delete_word")) {
+			if (k->is_action("ui_text_delete_word")) {
 				_delete(true);
 				event_accepted = true;
 			}
 
-			if (k->is_action("ui_delete_all_to_right")) {
+			if (k->is_action("ui_text_delete_all_to_right")) {
 				deselect();
 				text = text.substr(cursor_pos, text.length() - cursor_pos);
 				update_cached_width();
@@ -418,7 +418,7 @@ void LineEdit::_gui_input(Ref<InputEvent> p_event) {
 
 		if (event_accepted) {
 			accept_event();
-		} else if (!modifier_active && editable && k->get_keycode() >= 32) {
+		} else if (!modifier_active && editable && k->get_unicode() >= 32) {
 			// Handle Unicode (if no modifiers active)
 			selection_delete();
 			char32_t ucodestr[2] = { (char32_t)k->get_unicode(), 0 };
