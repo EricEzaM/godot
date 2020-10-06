@@ -524,23 +524,23 @@ void EditorSettingsDialog::_action_edited(const String &p_name, const Dictionary
 }
 
 void EditorSettingsDialog::_update_action_map_editor() {
-	Map<StringName, InputMap::Action> action_map = InputMap::get_singleton()->get_action_map();
+	OrderedHashMap<StringName, InputMap::Action> action_map = InputMap::get_singleton()->get_action_map();
 
 	Vector<ActionMapEditor::ActionInfo> actions;
-	for (Map<StringName, InputMap::Action>::Element *E = action_map.front(); E; E = E->next()) {
+	for (OrderedHashMap<StringName, InputMap::Action>::Element E = action_map.front(); E; E = E.next()) {
 		Array events;
-		for (List<Ref<InputEvent>>::Element *I = E->get().inputs.front(); I; I = I->next()) {
+		for (List<Ref<InputEvent>>::Element *I = E.get().inputs.front(); I; I = I->next()) {
 			events.push_back(I->get());
 		}
 
 		Dictionary action;
-		action["deadzone"] = Variant(E->get().deadzone);
+		action["deadzone"] = Variant(E.get().deadzone);
 		action["events"] = events;
 
 		ActionMapEditor::ActionInfo action_info;
 		action_info.action = action;
 		action_info.editable = false;
-		action_info.name = E->key();
+		action_info.name = E.key();
 
 		actions.push_back(action_info);
 	}

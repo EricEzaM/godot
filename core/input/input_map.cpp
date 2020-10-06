@@ -87,8 +87,8 @@ List<StringName> InputMap::get_actions() const {
 		return actions;
 	}
 
-	for (Map<StringName, Action>::Element *E = input_map.front(); E; E = E->next()) {
-		actions.push_back(E->key());
+	for (OrderedHashMap<StringName, Action>::Element E = input_map.front(); E; E = E.next()) {
+		actions.push_back(E.key());
 	}
 
 	return actions;
@@ -167,12 +167,12 @@ Array InputMap::_action_get_events(const StringName &p_action) {
 }
 
 const List<Ref<InputEvent>> *InputMap::action_get_events(const StringName &p_action) {
-	const Map<StringName, Action>::Element *E = input_map.find(p_action);
+	const OrderedHashMap<StringName, Action>::Element E = input_map.find(p_action);
 	if (!E) {
 		return nullptr;
 	}
 
-	return &E->get().inputs;
+	return &E.get().inputs;
 }
 
 bool InputMap::event_is_action(const Ref<InputEvent> &p_event, const StringName &p_action) const {
@@ -180,7 +180,7 @@ bool InputMap::event_is_action(const Ref<InputEvent> &p_event, const StringName 
 }
 
 bool InputMap::event_get_action_status(const Ref<InputEvent> &p_event, const StringName &p_action, bool *p_pressed, float *p_strength) const {
-	Map<StringName, Action>::Element *E = input_map.find(p_action);
+	OrderedHashMap<StringName, Action>::Element E = input_map.find(p_action);
 	ERR_FAIL_COND_V_MSG(!E, false, "Request for nonexistent InputMap action '" + String(p_action) + "'.");
 
 	Ref<InputEventAction> input_event_action = p_event;
@@ -196,7 +196,7 @@ bool InputMap::event_get_action_status(const Ref<InputEvent> &p_event, const Str
 
 	bool pressed;
 	float strength;
-	List<Ref<InputEvent>>::Element *event = _find_event(E->get(), p_event, &pressed, &strength);
+	List<Ref<InputEvent>>::Element *event = _find_event(E.get(), p_event, &pressed, &strength);
 	if (event != nullptr) {
 		if (p_pressed != nullptr) {
 			*p_pressed = pressed;
@@ -210,7 +210,7 @@ bool InputMap::event_get_action_status(const Ref<InputEvent> &p_event, const Str
 	}
 }
 
-const Map<StringName, InputMap::Action> &InputMap::get_action_map() const {
+const OrderedHashMap<StringName, InputMap::Action> &InputMap::get_action_map() const {
 	return input_map;
 }
 
