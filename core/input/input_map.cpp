@@ -605,6 +605,10 @@ const OrderedHashMap<String, List<Ref<InputEvent>>> &InputMap::get_builtins() {
 	inputs.push_back(InputEventKey::create_reference(KEY_INSERT));
 	default_builtin_cache.insert("ui_text_toggle_insert_mode", inputs);
 
+	inputs = List<Ref<InputEvent>>();
+	inputs.push_back(InputEventKey::create_reference(KEY_MENU));
+	default_builtin_cache.insert("ui_menu", inputs);
+
 	// ///// UI Graph Shortcuts /////
 
 	inputs = List<Ref<InputEvent>>();

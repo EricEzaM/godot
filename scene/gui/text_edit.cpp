@@ -3165,7 +3165,7 @@ void TextEdit::_gui_input(const Ref<InputEvent> &p_gui_input) {
 
 		// MISC.
 
-		if (k->get_keycode() == KEY_MENU) {
+		if (k->is_action("ui_menu")) {
 			if (context_menu_enabled) {
 				menu->set_position(get_global_transform().xform(_get_cursor_pixel_pos()));
 				menu->set_size(Vector2(1, 1));

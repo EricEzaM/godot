@@ -288,7 +288,7 @@ void LineEdit::_gui_input(Ref<InputEvent> p_event) {
 		bool event_accepted = false;
 
 		if (context_menu_enabled) {
-			if (k->get_keycode() == KEY_MENU) {
+			if (k->is_action("ui_menu")) {
 				Point2 pos = Point2(get_cursor_pixel_pos(), (get_size().y + get_theme_font("font")->get_height()) / 2);
 				menu->set_position(get_global_transform().xform(pos));
 				menu->set_size(Vector2(1, 1));
