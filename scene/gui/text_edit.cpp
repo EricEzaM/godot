@@ -3632,6 +3632,7 @@ int TextEdit::_get_control_height() const {
 
 void TextEdit::_generate_context_menu() {
 	// Reorganize context menu.
+	// These cannot use the actions/shortcuts system as it would rely on Editor/Project settings.
 	menu->clear();
 	if (!readonly) {
 		menu->add_item(RTR("Cut"), MENU_CUT, is_shortcut_keys_enabled() ? KEY_MASK_CMD | KEY_X : 0);

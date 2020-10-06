@@ -1607,6 +1607,7 @@ void LineEdit::_create_undo_state() {
 
 void LineEdit::_generate_context_menu() {
 	// Reorganize context menu.
+	// These cannot use the actions/shortcuts system as it would rely on Editor/Project settings.
 	menu->clear();
 	if (editable) {
 		menu->add_item(RTR("Cut"), MENU_CUT, is_shortcut_keys_enabled() ? KEY_MASK_CMD | KEY_X : 0);
