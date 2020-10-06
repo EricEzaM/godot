@@ -164,6 +164,10 @@ protected:
 	static void _bind_methods();
 
 public:
+	void _move_cursor_left(bool p_select, bool p_move_by_word = false);
+	void _move_cursor_right(bool p_select, bool p_move_by_word = false);
+	void _backspace(bool p_word = false);
+	void _delete(bool p_word = false);
 	void set_align(Align p_align);
 	Align get_align() const;
 
