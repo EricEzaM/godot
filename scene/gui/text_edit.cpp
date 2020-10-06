@@ -3193,103 +3193,64 @@ void TextEdit::_gui_input(const Ref<InputEvent> &p_gui_input) {
 		// Remove shift or else actions will not match. Use above variable for selection.
 		k->set_shift(false);
 
-		// SHIFTs must be checked first and be inside else if, otherwise selection will not occur.
-
-		if (k->is_action("ui_text_caret_left") && shift_pressed) {
-			_move_cursor_left(true, false);
-			event_accepted = true;
-		} else if (k->is_action("ui_text_caret_left")) {
-			_move_cursor_left();
+		if (k->is_action("ui_text_caret_left")) {
+			_move_cursor_left(shift_pressed, false);
 			event_accepted = true;
 		}
-		if (k->is_action("ui_text_caret_word_left") && shift_pressed) {
-			_move_cursor_left(true, true);
-			event_accepted = true;
-		} else if (k->is_action("ui_text_caret_word_left")) {
-			_move_cursor_left(false, true);
+		if (k->is_action("ui_text_caret_word_left")) {
+			_move_cursor_left(shift_pressed, true);
 			event_accepted = true;
 		}
-
-		if (k->is_action("ui_text_caret_right") && shift_pressed) {
-			_move_cursor_right(true, false);
-			event_accepted = true;
-		} else if (k->is_action("ui_text_caret_right")) {
-			_move_cursor_right();
+		if (k->is_action("ui_text_caret_right")) {
+			_move_cursor_right(shift_pressed, false);
 			event_accepted = true;
 		}
-		if (k->is_action("ui_text_caret_word_right") && shift_pressed) {
-			_move_cursor_right(true, true);
-			event_accepted = true;
-		} else if (k->is_action("ui_text_caret_word_right")) {
-			_move_cursor_right(false, true);
+		if (k->is_action("ui_text_caret_word_right")) {
+			_move_cursor_right(shift_pressed, true);
 			event_accepted = true;
 		}
 
 		// CURSOR MOVEMENT - UP, DOWN.
 
-		if (k->is_action("ui_text_caret_up") && shift_pressed) {
-			_move_cursor_up(true);
-			event_accepted = true;
-		} else if (k->is_action("ui_text_caret_up")) {
-			_move_cursor_up();
+		if (k->is_action("ui_text_caret_up")) {
+			_move_cursor_up(shift_pressed);
 			event_accepted = true;
 		}
-		if (k->is_action("ui_text_caret_down") && shift_pressed) {
-			_move_cursor_down(true);
-			event_accepted = true;
-		} else if (k->is_action("ui_text_caret_down")) {
-			_move_cursor_down();
+		if (k->is_action("ui_text_caret_down")) {
+			_move_cursor_down(shift_pressed);
 			event_accepted = true;
 		}
 
 		// CURSOR MOVEMENT - LINE START/END.
 
-		if (k->is_action("ui_text_caret_line_start") && shift_pressed) {
-			_move_cursor_to_line_start(true);
-			event_accepted = true;
-		} else if (k->is_action("ui_text_caret_line_start")) {
-			_move_cursor_to_line_start();
+		if (k->is_action("ui_text_caret_line_start")) {
+			_move_cursor_to_line_start(shift_pressed);
 			event_accepted = true;
 		}
-		if (k->is_action("ui_text_caret_line_end") && shift_pressed) {
-			_move_cursor_to_line_end(true);
-			event_accepted = true;
-		} else if (k->is_action("ui_text_caret_line_end")) {
-			_move_cursor_to_line_end();
+		if (k->is_action("ui_text_caret_line_end")) {
+			_move_cursor_to_line_end(shift_pressed);
 			event_accepted = true;
 		}
 
 		// CURSOR MOVEMENT - PAGE UP/DOWN.
 
-		if (k->is_action("ui_text_caret_page_up") && shift_pressed) {
-			_move_cursor_page_up(true);
-			event_accepted = true;
-		} else if (k->is_action("ui_text_caret_page_up")) {
-			_move_cursor_page_up();
+		if (k->is_action("ui_text_caret_page_up")) {
+			_move_cursor_page_up(shift_pressed);
 			event_accepted = true;
 		}
-		if (k->is_action("ui_text_caret_page_down") && shift_pressed) {
-			_move_cursor_page_down(true);
-			event_accepted = true;
-		} else if (k->is_action("ui_text_caret_page_down")) {
-			_move_cursor_page_down();
+		if (k->is_action("ui_text_caret_page_down")) {
+			_move_cursor_page_down(shift_pressed);
 			event_accepted = true;
 		}
 
 		// CURSOR MOVEMENT - DOCUMENT START/END.
 
 		if (k->is_action("ui_text_caret_document_start") && shift_pressed) {
-			_move_cursor_document_start(true);
-			event_accepted = true;
-		} else if (k->is_action("ui_text_caret_document_start")) {
-			_move_cursor_document_start();
+			_move_cursor_document_start(shift_pressed);
 			event_accepted = true;
 		}
 		if (k->is_action("ui_text_caret_document_end") && shift_pressed) {
-			_move_cursor_document_end(true);
-			event_accepted = true;
-		} else if (k->is_action("ui_text_caret_document_end")) {
-			_move_cursor_document_end();
+			_move_cursor_document_end(shift_pressed);
 			event_accepted = true;
 		}
 
