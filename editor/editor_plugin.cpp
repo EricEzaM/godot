@@ -355,11 +355,11 @@ void EditorPlugin::remove_custom_type(const String &p_type) {
 }
 
 void EditorPlugin::add_autoload_singleton(const String &p_name, const String &p_path) {
-	EditorNode::get_singleton()->get_project_settings()->get_autoload_settings()->autoload_add(p_name, p_path);
+	EditorNode::get_singleton()->get_project_settings_editor()->get_autoload_settings()->autoload_add(p_name, p_path);
 }
 
 void EditorPlugin::remove_autoload_singleton(const String &p_name) {
-	EditorNode::get_singleton()->get_project_settings()->get_autoload_settings()->autoload_remove(p_name);
+	EditorNode::get_singleton()->get_project_settings_editor()->get_autoload_settings()->autoload_remove(p_name);
 }
 
 Button *EditorPlugin::add_control_to_bottom_panel(Control *p_control, const String &p_title) {
@@ -387,7 +387,7 @@ void EditorPlugin::add_control_to_container(CustomControlContainer p_location, C
 
 	switch (p_location) {
 		case CONTAINER_TOOLBAR: {
-			EditorNode::get_menu_hb()->add_child(p_control);
+			EditorNode::get_singleton()->get_menu_hb()->add_child(p_control);
 		} break;
 
 		case CONTAINER_SPATIAL_EDITOR_MENU: {
@@ -448,7 +448,7 @@ void EditorPlugin::remove_control_from_container(CustomControlContainer p_locati
 
 	switch (p_location) {
 		case CONTAINER_TOOLBAR: {
-			EditorNode::get_menu_hb()->remove_child(p_control);
+			EditorNode::get_singleton()->get_menu_hb()->remove_child(p_control);
 		} break;
 
 		case CONTAINER_SPATIAL_EDITOR_MENU: {

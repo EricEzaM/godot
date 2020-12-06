@@ -114,7 +114,7 @@ void PluginConfigDialog::_on_confirmed() {
 
 		emit_signal("plugin_ready", script.operator->(), active_edit->is_pressed() ? subfolder_edit->get_text() : "");
 	} else {
-		EditorNode::get_singleton()->get_project_settings()->update_plugins();
+		EditorNode::get_singleton()->get_project_settings_editor()->update_plugins();
 	}
 	_clear_fields();
 }

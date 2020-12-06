@@ -175,7 +175,6 @@
 #include "editor/pvrtc_compress.h"
 #include "editor/quick_open.h"
 #include "editor/register_exporters.h"
-#include "editor/run_settings_dialog.h"
 #include "editor/settings_config_dialog.h"
 #include "scene/main/window.h"
 #include "servers/display_server.h"
@@ -594,7 +593,7 @@ void EditorNode::_notification(int p_what) {
 		} break;
 
 		case NOTIFICATION_WM_ABOUT: {
-			show_about();
+			_menu_option_confirm(HELP_ABOUT, false);
 		} break;
 
 		case NOTIFICATION_WM_CLOSE_REQUEST: {
@@ -708,8 +707,8 @@ void EditorNode::_on_plugin_ready(Object *p_script, const String &p_activate_nam
 	if (p_activate_name.length()) {
 		set_addon_plugin_enabled(p_activate_name, true);
 	}
-	project_settings->update_plugins();
-	project_settings->hide();
+	project_settings_editor->update_plugins();
+	project_settings_editor->hide();
 	push_item(script.operator->());
 }
 
@@ -748,7 +747,7 @@ void EditorNode::_resources_changed(const Vector<String> &p_resources) {
 	}
 }
 
-void EditorNode::_fs_changed() {
+void EditorNode::_filesystem_changed() {
 	for (Set<FileDialog *>::Element *E = file_dialogs.front(); E; E = E->next()) {
 		E->get()->invalidate();
 	}
@@ -759,7 +758,7 @@ void EditorNode::_fs_changed() {
 
 	_mark_unsaved_scenes();
 
-	// FIXME: Move this to a cleaner location, it's hacky to do this is _fs_changed.
+	// FIXME: Move this to a cleaner location, it's hacky to do this is _filesystem_changed.
 	String export_error;
 	if (export_defer.preset != "" && !EditorFileSystem::get_singleton()->is_scanning()) {
 		String preset_name = export_defer.preset;
@@ -875,15 +874,6 @@ void EditorNode::_sources_changed(bool p_exist) {
 			load_scene(defer_load_scene);
 			defer_load_scene = "";
 		}
-	}
-}
-
-void EditorNode::_vp_resized() {
-}
-
-void EditorNode::_node_renamed() {
-	if (get_inspector()) {
-		get_inspector()->update_tree();
 	}
 }
 
@@ -1082,7 +1072,7 @@ void EditorNode::_dialog_display_load_error(String p_file, Error p_error) {
 	}
 }
 
-void EditorNode::_get_scene_metadata(const String &p_file) {
+void EditorNode::_apply_editor_state_for_scene(const String &p_file) {
 	Node *scene = editor_data.get_edited_scene_root();
 
 	if (!scene) {
@@ -1113,7 +1103,7 @@ void EditorNode::_get_scene_metadata(const String &p_file) {
 	editor_data.set_editor_states(md);
 }
 
-void EditorNode::_set_scene_metadata(const String &p_file, int p_idx) {
+void EditorNode::_save_editor_state_for_scene(const String &p_file, int p_idx) {
 	Node *scene = editor_data.get_edited_scene_root(p_idx);
 
 	if (!scene) {
@@ -1179,6 +1169,7 @@ bool EditorNode::_find_and_save_edited_subresources(Object *obj, Map<RES, bool> 
 	List<PropertyInfo> pi;
 	obj->get_property_list(&pi);
 	for (List<PropertyInfo>::Element *E = pi.front(); E; E = E->next()) {
+		// If property is not for storage, don't need to save it.
 		if (!(E->get().usage & PROPERTY_USAGE_STORAGE)) {
 			continue;
 		}
@@ -1195,6 +1186,8 @@ bool EditorNode::_find_and_save_edited_subresources(Object *obj, Map<RES, bool> 
 			case Variant::ARRAY: {
 				Array varray = obj->get(E->get().name);
 				int len = varray.size();
+
+				// Loop through all items in the array and if they are a resource, save them.
 				for (int i = 0; i < len; i++) {
 					const Variant &v = varray.get(i);
 					RES res = v;
@@ -1208,6 +1201,8 @@ bool EditorNode::_find_and_save_edited_subresources(Object *obj, Map<RES, bool> 
 				Dictionary d = obj->get(E->get().name);
 				List<Variant> keys;
 				d.get_key_list(&keys);
+
+				// Loop through all items in the dictionary and if they are a resource, save them.
 				for (List<Variant>::Element *F = keys.front(); F; F = F->next()) {
 					Variant v = d[F->get()];
 					RES res = v;
@@ -1433,7 +1428,7 @@ void EditorNode::_save_scene(String p_file, int idx) {
 	editor_data.apply_changes_in_editors();
 	_save_default_environment();
 
-	_set_scene_metadata(p_file, idx);
+	_save_editor_state_for_scene(p_file, idx);
 
 	Ref<PackedScene> sdata;
 
@@ -1554,7 +1549,9 @@ void EditorNode::_mark_unsaved_scenes() {
 		}
 
 		String path = node->get_filename();
-		if (!(path == String() || FileAccess::exists(path))) {
+		if (path == String() || FileAccess::exists(path)) {
+			// do nothing
+		} else {
 			if (i == editor_data.get_edited_scene()) {
 				set_current_version(-1);
 			} else {
@@ -2557,11 +2554,8 @@ void EditorNode::_menu_option_confirm(int p_option, bool p_confirmed) {
 			run_play_current();
 
 		} break;
-		case RUN_SCENE_SETTINGS: {
-			run_settings_dialog->popup_run_settings();
-		} break;
 		case RUN_SETTINGS: {
-			project_settings->popup_project_settings();
+			project_settings_editor->popup_project_settings();
 		} break;
 		case FILE_INSTALL_ANDROID_SOURCE: {
 			if (p_confirmed) {
@@ -2714,21 +2708,12 @@ void EditorNode::_menu_option_confirm(int p_option, bool p_confirmed) {
 	}
 }
 
-void EditorNode::_request_screenshot() {
-	_screenshot();
-}
-
 void EditorNode::_screenshot(bool p_use_utc) {
+	// Create the filename and the path the to file
 	String name = "editor_screenshot_" + OS::get_singleton()->get_iso_date_time(p_use_utc).replace(":", "") + ".png";
 	NodePath path = String("user://") + name;
-	_save_screenshot(path);
-	if (EditorSettings::get_singleton()->get("interface/editor/automatically_open_screenshots")) {
-		OS::get_singleton()->shell_open(String("file://") + ProjectSettings::get_singleton()->globalize_path(path));
-	}
-}
 
-void EditorNode::_save_screenshot(NodePath p_path) {
-	Control *editor_viewport = EditorInterface::get_singleton()->get_editor_viewport();
+	Control *editor_viewport = get_viewport();
 	ERR_FAIL_COND_MSG(!editor_viewport, "Cannot get editor viewport.");
 	Viewport *viewport = editor_viewport->get_viewport();
 	ERR_FAIL_COND_MSG(!viewport, "Cannot get editor viewport.");
@@ -2736,8 +2721,13 @@ void EditorNode::_save_screenshot(NodePath p_path) {
 	ERR_FAIL_COND_MSG(texture.is_null(), "Cannot get editor viewport texture.");
 	Ref<Image> img = texture->get_data();
 	ERR_FAIL_COND_MSG(img.is_null(), "Cannot get editor viewport texture image.");
-	Error error = img->save_png(p_path);
-	ERR_FAIL_COND_MSG(error != OK, "Cannot save screenshot to file '" + p_path + "'.");
+	Error error = img->save_png(path);
+	ERR_FAIL_COND_MSG(error != OK, "Cannot save screenshot to file '" + path + "'.");
+
+	// Open the screenshot immediately if the setting is set
+	if (EditorSettings::get_singleton()->get("interface/editor/automatically_open_screenshots")) {
+		OS::get_singleton()->shell_open(String("file://") + ProjectSettings::get_singleton()->globalize_path(path));
+	}
 }
 
 void EditorNode::_tool_menu_option(int p_idx) {
@@ -3010,7 +3000,7 @@ void EditorNode::_update_addon_config() {
 		ProjectSettings::get_singleton()->set("editor_plugins/enabled", enabled_addons);
 	}
 
-	project_settings->queue_save();
+	project_settings_editor->queue_save();
 }
 
 void EditorNode::set_addon_plugin_enabled(const String &p_addon, bool p_enabled, bool p_config_changed) {
@@ -3146,6 +3136,7 @@ void EditorNode::set_edited_scene(Node *p_scene) {
 	}
 	scene_tree_dock->set_edited_scene(p_scene);
 	if (get_tree()) {
+		// FIXME Why is this needed?
 		get_tree()->set_edited_scene_root(p_scene);
 	}
 
@@ -3240,10 +3231,6 @@ bool EditorNode::is_changing_scene() const {
 	return changing_scene;
 }
 
-void EditorNode::_clear_undo_history() {
-	get_undo_redo()->clear_history(false);
-}
-
 void EditorNode::set_current_scene(int p_idx) {
 	//Save the folding in case the scene gets reloaded.
 	if (editor_data.get_scene_path(p_idx) != "" && editor_data.get_edited_scene_root(p_idx)) {
@@ -3255,7 +3242,7 @@ void EditorNode::set_current_scene(int p_idx) {
 			editor_folding.load_scene_folding(editor_data.get_edited_scene_root(p_idx), editor_data.get_scene_path(p_idx));
 		}
 
-		call_deferred("_clear_undo_history");
+		get_undo_redo()->call_deferred("clear_history", false);
 	}
 
 	changing_scene = true;
@@ -3438,7 +3425,7 @@ Error EditorNode::load_scene(const String &p_scene, bool p_ignore_broken_deps, b
 	new_scene->set_scene_instance_state(Ref<SceneState>());
 
 	set_edited_scene(new_scene);
-	_get_scene_metadata(p_scene);
+	_apply_editor_state_for_scene(p_scene);
 
 	saved_version = editor_data.get_undo_redo().get_version();
 	_update_title();
@@ -3478,10 +3465,6 @@ void EditorNode::open_request(const String &p_path) {
 	load_scene(p_path); // as it will be opened in separate tab
 }
 
-void EditorNode::request_instance_scene(const String &p_path) {
-	scene_tree_dock->instance(p_path);
-}
-
 void EditorNode::request_instance_scenes(const Vector<String> &p_files) {
 	scene_tree_dock->instance_scenes(p_files);
 }
@@ -3509,15 +3492,6 @@ void EditorNode::_inherit_request(String p_file) {
 
 void EditorNode::_instance_request(const Vector<String> &p_files) {
 	request_instance_scenes(p_files);
-}
-
-void EditorNode::_close_messages() {
-	old_split_ofs = center_split->get_split_offset();
-	center_split->set_split_offset(0);
-}
-
-void EditorNode::_show_messages() {
-	center_split->set_split_offset(old_split_ofs);
 }
 
 void EditorNode::_add_to_recent_scenes(const String &p_scene) {
@@ -5142,7 +5116,7 @@ void EditorNode::_global_menu_scene(const Variant &p_tag) {
 	scene_tabs->set_current_tab(idx);
 }
 
-void EditorNode::_global_menu_new_window(const Variant &p_tag) {
+void EditorNode::_global_menu_new_window(const Variant &) {
 	if (OS::get_singleton()->get_main_loop()) {
 		List<String> args;
 		args.push_back("-p");
@@ -5153,7 +5127,7 @@ void EditorNode::_global_menu_new_window(const Variant &p_tag) {
 	}
 }
 
-void EditorNode::_dropped_files(const Vector<String> &p_files, int p_screen) {
+void EditorNode::_dropped_files(const Vector<String> &p_files) {
 	String to_path = ProjectSettings::get_singleton()->globalize_path(get_filesystem_dock()->get_selected_path());
 
 	_add_dropped_files_recursive(p_files, to_path);
@@ -5239,7 +5213,7 @@ void EditorNode::reload_scene(const String &p_path) {
 
 	if (current_tab == scene_idx) {
 		editor_data.apply_changes_in_editors();
-		_set_scene_metadata(p_path);
+		_save_editor_state_for_scene(p_path);
 	}
 
 	//remove scene
@@ -5269,6 +5243,7 @@ EditorPluginInitializeCallback EditorNode::plugin_init_callbacks[EditorNode::MAX
 int EditorNode::build_callback_count = 0;
 
 void EditorNode::add_build_callback(EditorBuildCallback p_callback) {
+	// FIXME Bug here, should not be MAX_INIT_CALLBACKS, this is the build callback method...
 	ERR_FAIL_COND(build_callback_count == MAX_INIT_CALLBACKS);
 
 	build_callbacks[build_callback_count++] = p_callback;
@@ -5423,17 +5398,13 @@ void EditorNode::_feature_profile_changed() {
 
 void EditorNode::_bind_methods() {
 	ClassDB::bind_method("_editor_select", &EditorNode::_editor_select);
-	ClassDB::bind_method("_node_renamed", &EditorNode::_node_renamed);
 	ClassDB::bind_method("edit_node", &EditorNode::edit_node);
 	ClassDB::bind_method("_unhandled_input", &EditorNode::_unhandled_input);
 
 	ClassDB::bind_method(D_METHOD("push_item", "object", "property", "inspector_only"), &EditorNode::push_item, DEFVAL(""), DEFVAL(false));
 
-	ClassDB::bind_method("_get_scene_metadata", &EditorNode::_get_scene_metadata);
 	ClassDB::bind_method("set_edited_scene", &EditorNode::set_edited_scene);
 	ClassDB::bind_method("open_request", &EditorNode::open_request);
-	ClassDB::bind_method("_close_messages", &EditorNode::_close_messages);
-	ClassDB::bind_method("_show_messages", &EditorNode::_show_messages);
 
 	ClassDB::bind_method("stop_child_process", &EditorNode::stop_child_process);
 
@@ -5445,8 +5416,6 @@ void EditorNode::_bind_methods() {
 	ClassDB::bind_method("_set_main_scene_state", &EditorNode::_set_main_scene_state);
 	ClassDB::bind_method("_update_recent_scenes", &EditorNode::_update_recent_scenes);
 
-	ClassDB::bind_method("_clear_undo_history", &EditorNode::_clear_undo_history);
-
 	ClassDB::bind_method("edit_item_resource", &EditorNode::edit_item_resource);
 
 	ClassDB::bind_method(D_METHOD("get_gui_base"), &EditorNode::get_gui_base);
@@ -5454,7 +5423,6 @@ void EditorNode::_bind_methods() {
 	ClassDB::bind_method(D_METHOD("_on_plugin_ready"), &EditorNode::_on_plugin_ready); // Still used by some connect_compat.
 
 	ClassDB::bind_method("_screenshot", &EditorNode::_screenshot);
-	ClassDB::bind_method("_save_screenshot", &EditorNode::_save_screenshot);
 
 	ADD_SIGNAL(MethodInfo("play_pressed"));
 	ADD_SIGNAL(MethodInfo("pause_pressed"));
@@ -6088,11 +6056,8 @@ EditorNode::EditorNode() {
 	settings_config_dialog = memnew(EditorSettingsDialog);
 	gui_base->add_child(settings_config_dialog);
 
-	project_settings = memnew(ProjectSettingsEditor(&editor_data));
-	gui_base->add_child(project_settings);
-
-	run_settings_dialog = memnew(RunSettingsDialog);
-	gui_base->add_child(run_settings_dialog);
+	project_settings_editor = memnew(ProjectSettingsEditor(&editor_data));
+	gui_base->add_child(project_settings_editor);
 
 	export_template_manager = memnew(ExportTemplateManager);
 	gui_base->add_child(export_template_manager);
@@ -6534,8 +6499,6 @@ EditorNode::EditorNode() {
 
 	old_split_ofs = 0;
 
-	center_split->connect("resized", callable_mp(this, &EditorNode::_vp_resized));
-
 	orphan_resources = memnew(OrphanResourcesDialog);
 	gui_base->add_child(orphan_resources);
 
@@ -6787,7 +6750,6 @@ EditorNode::EditorNode() {
 	_update_recent_scenes();
 
 	editor_data.restore_editor_global_states();
-	convert_old = false;
 	opening_prev = false;
 	set_process_unhandled_input(true);
 	_playing_edited = false;
@@ -6806,7 +6768,7 @@ EditorNode::EditorNode() {
 	gui_base->add_child(execute_output_dialog);
 
 	EditorFileSystem::get_singleton()->connect("sources_changed", callable_mp(this, &EditorNode::_sources_changed));
-	EditorFileSystem::get_singleton()->connect("filesystem_changed", callable_mp(this, &EditorNode::_fs_changed));
+	EditorFileSystem::get_singleton()->connect("filesystem_changed", callable_mp(this, &EditorNode::_filesystem_changed));
 	EditorFileSystem::get_singleton()->connect("resources_reimported", callable_mp(this, &EditorNode::_resources_reimported));
 	EditorFileSystem::get_singleton()->connect("resources_reload", callable_mp(this, &EditorNode::_resources_changed));
 
@@ -6860,7 +6822,7 @@ EditorNode::EditorNode() {
 	screenshot_timer = memnew(Timer);
 	screenshot_timer->set_one_shot(true);
 	screenshot_timer->set_wait_time(settings_menu->get_popup()->get_submenu_popup_delay() + 0.1f);
-	screenshot_timer->connect("timeout", callable_mp(this, &EditorNode::_request_screenshot));
+	screenshot_timer->connect("timeout", callable_mp(this, &EditorNode::_screenshot), varray(false));
 	add_child(screenshot_timer);
 	screenshot_timer->set_owner(get_owner());
 
@@ -6915,7 +6877,7 @@ bool EditorPluginList::forward_spatial_gui_input(Camera3D *p_camera, const Ref<I
 	bool discard = false;
 
 	for (int i = 0; i < plugins_list.size(); i++) {
-		if ((!serve_when_force_input_enabled) && plugins_list[i]->is_input_event_forwarding_always_enabled()) {
+		if (!serve_when_force_input_enabled && plugins_list[i]->is_input_event_forwarding_always_enabled()) {
 			continue;
 		}
 
