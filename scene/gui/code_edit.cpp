@@ -153,8 +153,11 @@ void CodeEdit::_notification(int p_what) {
 					tl.instantiate();
 					tl->add_string(code_completion_options[l].display, font, font_size);
 
+					Ref<TextLine> tl_type;
+					tl_type.instantiate();
+					tl_type->add_string(code_completion_options[l].type_information, font, font_size);
+
 					int yofs = (row_height - tl->get_size().y) / 2;
-					Point2 title_pos(code_completion_rect.position.x, code_completion_rect.position.y + i * row_height + yofs);
 
 					/* Draw completion icon if it is valid. */
 					const Ref<Texture2D> &icon = code_completion_options[l].icon;
@@ -163,21 +166,29 @@ void CodeEdit::_notification(int p_what) {
 						Size2 icon_size = icon_area.size * 0.7;
 						icon->draw_rect(ci, Rect2(icon_area.position + (icon_area.size - icon_size) / 2, icon_size));
 					}
-					title_pos.x = icon_area.position.x + icon_area.size.width + icon_hsep;
+
+					int buffer = 10;
+					Point2 title_pos(icon_area.position.x + icon_area.size.width + icon_hsep, code_completion_rect.position.y + i * row_height + yofs);
+					Point2 type_pos(icon_area.position.x + icon_area.size.width + icon_hsep + font->get_string_size(code_completion_options[l].display).x + buffer, code_completion_rect.position.y + i * row_height + yofs);
 
 					tl->set_width(code_completion_rect.size.width - (icon_area_size.x + icon_hsep));
+					tl_type->set_width(tl->get_width() - font->get_string_size(code_completion_options[l].display).x - buffer);
+
 					if (rtl) {
 						if (code_completion_options[l].default_value.get_type() == Variant::COLOR) {
 							draw_rect(Rect2(Point2(code_completion_rect.position.x, icon_area.position.y), icon_area_size), (Color)code_completion_options[l].default_value);
 						}
 						tl->set_align(HALIGN_RIGHT);
+						tl_type->set_align(HALIGN_LEFT);
 					} else {
 						if (code_completion_options[l].default_value.get_type() == Variant::COLOR) {
 							draw_rect(Rect2(Point2(code_completion_rect.position.x + code_completion_rect.size.width - icon_area_size.x, icon_area.position.y), icon_area_size), (Color)code_completion_options[l].default_value);
 						}
 						tl->set_align(HALIGN_LEFT);
+						tl_type->set_align(HALIGN_RIGHT);
 					}
 					tl->draw(ci, title_pos, code_completion_options[l].font_color);
+					tl_type->draw(ci, type_pos, code_completion_options[l].font_color.darkened(0.4));
 				}
 
 				/* Draw a small scroll rectangle to show a position in the options. */
@@ -1812,7 +1823,7 @@ void CodeEdit::request_code_completion(bool p_force) {
 	}
 }
 
-void CodeEdit::add_code_completion_option(CodeCompletionKind p_type, const String &p_display_text, const String &p_insert_text, const Color &p_text_color, const RES &p_icon, const Variant &p_value) {
+void CodeEdit::add_code_completion_option(CodeCompletionKind p_type, const String &p_display_text, const String &p_insert_text, const Color &p_text_color, const RES &p_icon, const Variant &p_value, const String &p_type_info) {
 	ScriptCodeCompletionOption completion_option;
 	completion_option.kind = (ScriptCodeCompletionOption::Kind)p_type;
 	completion_option.display = p_display_text;
@@ -1820,6 +1831,7 @@ void CodeEdit::add_code_completion_option(CodeCompletionKind p_type, const Strin
 	completion_option.font_color = p_text_color;
 	completion_option.icon = p_icon;
 	completion_option.default_value = p_value;
+	completion_option.type_information = p_type_info;
 	code_completion_option_submitted.push_back(completion_option);
 }
 
@@ -2737,7 +2749,7 @@ void CodeEdit::_filter_code_completion_candidates_impl() {
 				offset = line_height;
 			}
 
-			max_width = MAX(max_width, font->get_string_size(option.display, font_size).width + offset);
+			max_width = MAX(max_width, font->get_string_size(option.display, font_size).width + offset + font->get_string_size(option.type_information, font_size).width);
 			code_completion_options.push_back(option);
 		}
 
@@ -2895,7 +2907,7 @@ void CodeEdit::_filter_code_completion_candidates_impl() {
 			} else {
 				completion_options_subseq.push_back(option);
 			}
-			max_width = MAX(max_width, font->get_string_size(option.display, font_size).width + offset);
+			max_width = MAX(max_width, font->get_string_size(option.display, font_size).width + offset + font->get_string_size(option.type_information, font_size).width);
 			/* Matched the whole subsequence in s_lower. */
 		} else if (!*ssq_lower) {
 			/* Finished matching in the first s.length() characters. */
@@ -2904,7 +2916,7 @@ void CodeEdit::_filter_code_completion_candidates_impl() {
 			} else {
 				completion_options_subseq_casei.push_back(option);
 			}
-			max_width = MAX(max_width, font->get_string_size(option.display, font_size).width + offset);
+			max_width = MAX(max_width, font->get_string_size(option.display, font_size).width + offset + font->get_string_size(option.type_information, font_size).width);
 		}
 	}
 

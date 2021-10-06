@@ -227,6 +227,7 @@ struct ScriptCodeCompletionOption {
 	Color font_color;
 	RES icon;
 	Variant default_value;
+	String type_information;
 
 	ScriptCodeCompletionOption() {}
 
