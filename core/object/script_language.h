@@ -221,6 +221,13 @@ struct ScriptCodeCompletionOption {
 		KIND_FILE_PATH,
 		KIND_PLAIN_TEXT,
 	};
+
+	enum Location {
+		LOCATION_LOCAL = 0,
+		LOCATION_PARENT_MASK = (1 << 8),
+		LOCATION_OTHER = (1 << 9),
+	};
+
 	Kind kind = KIND_PLAIN_TEXT;
 	String display;
 	String insert_text;
@@ -228,13 +235,26 @@ struct ScriptCodeCompletionOption {
 	RES icon;
 	Variant default_value;
 	Vector<Pair<int, int>> matches;
+	int location;
 
 	ScriptCodeCompletionOption() {}
 
-	ScriptCodeCompletionOption(const String &p_text, Kind p_kind) {
+	ScriptCodeCompletionOption(const String &p_text, Kind p_kind, int p_location = LOCATION_OTHER) {
 		display = p_text;
 		insert_text = p_text;
 		kind = p_kind;
+		location = p_location;
+	}
+};
+
+struct ScriptCodeCompletionOptionCompare {
+	_FORCE_INLINE_ bool operator()(const ScriptCodeCompletionOption &l, const ScriptCodeCompletionOption &r) const {
+		// Sort by alpha
+		if (l.location == r.location) {
+			return l.display < r.display;
+		}
+
+		return l.location < r.location;
 	}
 };
 
