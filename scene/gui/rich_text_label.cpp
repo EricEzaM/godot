@@ -2756,9 +2756,9 @@ void RichTextLabel::_remove_item(Item *p_item, const int p_line, const int p_sub
 		// If a newline was erased, all lines AFTER the newline need to be decremented.
 		if (p_item->type == ITEM_NEWLINE) {
 			current_frame->lines.remove_at(p_line);
-			for (int i = 0; i < current->subitems.size(); i++) {
-				if (current->subitems[i]->line > p_subitem_line) {
-					current->subitems[i]->line--;
+			for (Item *subitem : current->subitems) {
+				if (subitem->line > p_subitem_line) {
+					subitem->line--;
 				}
 			}
 		}
@@ -2839,19 +2839,19 @@ bool RichTextLabel::remove_line(const int p_line) {
 	}
 
 	// Remove all subitems with the same line as that provided.
-	Vector<int> subitem_indices_to_remove;
-	for (int i = 0; i < current->subitems.size(); i++) {
-		if (current->subitems[i]->line == p_line) {
-			subitem_indices_to_remove.push_back(i);
+	Vector<Item *> items_to_remove;
+	for (Item *item : current->subitems) {
+		if (item->line == p_line) {
+			items_to_remove.push_back(item);
 		}
 	}
 
 	bool had_newline = false;
 	// Reverse for loop to remove items from the end first.
-	for (int i = subitem_indices_to_remove.size() - 1; i >= 0; i--) {
-		int subitem_idx = subitem_indices_to_remove[i];
-		had_newline = had_newline || current->subitems[subitem_idx]->type == ITEM_NEWLINE;
-		_remove_item(current->subitems[subitem_idx], current->subitems[subitem_idx]->line, p_line);
+	items_to_remove.reverse();
+	for (Item *to_remove : items_to_remove) {
+		had_newline = had_newline || to_remove->type == ITEM_NEWLINE;
+		_remove_item(to_remove, p_line, p_line);
 	}
 
 	if (!had_newline) {
@@ -2865,7 +2865,7 @@ bool RichTextLabel::remove_line(const int p_line) {
 		main->lines[0].from = main;
 	}
 
-	main->first_invalid_line.store(0);
+	main->first_invalid_line.store(MAX(p_line - 1, 0));
 	update();
 
 	return true;
