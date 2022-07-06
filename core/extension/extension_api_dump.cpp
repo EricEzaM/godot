@@ -46,7 +46,7 @@ static String get_type_name(const PropertyInfo &p_info) {
 			return p_info.hint_string + "*";
 		}
 	}
-	if (p_info.type == Variant::INT && (p_info.usage & PROPERTY_USAGE_CLASS_IS_ENUM)) {
+	if (p_info.type == Variant::INT && (p_info.usage & (PROPERTY_USAGE_CLASS_IS_ENUM | PROPERTY_USAGE_CLASS_IS_BITFIELD))) {
 		return String("enum::") + String(p_info.class_name);
 	}
 	if (p_info.class_name != StringName()) {
@@ -474,6 +474,38 @@ Dictionary NativeExtensionAPIDump::generate_extension_api() {
 				}
 			}
 			{
+				//enums
+				Array enums;
+
+				List<StringName> enum_names;
+				Variant::get_enums_for_type(type, &enum_names);
+				for (const StringName &enum_name : enum_names) {
+					Dictionary enum_dict;
+					enum_dict["name"] = String(enum_name);
+
+					List<StringName> enumeration_names;
+					Variant::get_enumerations_for_enum(type, enum_name, &enumeration_names);
+
+					Array values;
+
+					for (const StringName &enumeration : enumeration_names) {
+						Dictionary values_dict;
+						values_dict["name"] = String(enumeration);
+						values_dict["value"] = Variant::get_enum_value(type, enum_name, enumeration);
+						values.push_back(values_dict);
+					}
+
+					if (values.size()) {
+						enum_dict["values"] = values;
+					}
+					enums.push_back(enum_dict);
+				}
+
+				if (enums.size()) {
+					d["enums"] = enums;
+				}
+			}
+			{
 				//operators
 				Array operators;
 
@@ -633,6 +665,7 @@ Dictionary NativeExtensionAPIDump::generate_extension_api() {
 				for (const StringName &F : enum_list) {
 					Dictionary d2;
 					d2["name"] = String(F);
+					d2["is_bitfield"] = ClassDB::is_enum_bitfield(class_name, F);
 
 					Array values;
 					List<StringName> enum_constant_list;

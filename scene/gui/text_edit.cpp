@@ -1723,7 +1723,7 @@ void TextEdit::gui_input(const Ref<InputEvent> &p_gui_input) {
 
 						update();
 					}
-				} else if (is_mouse_over_selection()) {
+				} else if (drag_and_drop_selection_enabled && is_mouse_over_selection()) {
 					selection.selecting_mode = SelectionMode::SELECTION_MODE_NONE;
 					selection.drag_attempt = true;
 				} else {
@@ -2668,7 +2668,11 @@ void TextEdit::_update_caches() {
 
 /* General overrides. */
 Size2 TextEdit::get_minimum_size() const {
-	return style_normal->get_minimum_size();
+	Size2 size = style_normal->get_minimum_size();
+	if (fit_content_height) {
+		size.y += content_height_cache;
+	}
+	return size;
 }
 
 bool TextEdit::is_text_field() const {
@@ -4163,6 +4167,14 @@ bool TextEdit::is_deselect_on_focus_loss_enabled() const {
 	return deselect_on_focus_loss_enabled;
 }
 
+void TextEdit::set_drag_and_drop_selection_enabled(const bool p_enabled) {
+	drag_and_drop_selection_enabled = p_enabled;
+}
+
+bool TextEdit::is_drag_and_drop_selection_enabled() const {
+	return drag_and_drop_selection_enabled;
+}
+
 void TextEdit::set_override_selected_font_color(bool p_override_selected_font_color) {
 	override_selected_font_color = p_override_selected_font_color;
 }
@@ -4489,6 +4501,18 @@ void TextEdit::set_v_scroll_speed(float p_speed) {
 
 float TextEdit::get_v_scroll_speed() const {
 	return v_scroll_speed;
+}
+
+void TextEdit::set_fit_content_height_enabled(const bool p_enabled) {
+	if (fit_content_height == p_enabled) {
+		return;
+	}
+	fit_content_height = p_enabled;
+	update_minimum_size();
+}
+
+bool TextEdit::is_fit_content_height_enabled() const {
+	return fit_content_height;
 }
 
 double TextEdit::get_scroll_pos_for_line(int p_line, int p_wrap_index) const {
@@ -5243,6 +5267,9 @@ void TextEdit::_bind_methods() {
 	ClassDB::bind_method(D_METHOD("set_deselect_on_focus_loss_enabled", "enable"), &TextEdit::set_deselect_on_focus_loss_enabled);
 	ClassDB::bind_method(D_METHOD("is_deselect_on_focus_loss_enabled"), &TextEdit::is_deselect_on_focus_loss_enabled);
 
+	ClassDB::bind_method(D_METHOD("set_drag_and_drop_selection_enabled", "enable"), &TextEdit::set_drag_and_drop_selection_enabled);
+	ClassDB::bind_method(D_METHOD("is_drag_and_drop_selection_enabled"), &TextEdit::is_drag_and_drop_selection_enabled);
+
 	ClassDB::bind_method(D_METHOD("set_override_selected_font_color", "override"), &TextEdit::set_override_selected_font_color);
 	ClassDB::bind_method(D_METHOD("is_overriding_selected_font_color"), &TextEdit::is_overriding_selected_font_color);
 
@@ -5286,7 +5313,7 @@ void TextEdit::_bind_methods() {
 
 	/* Viewport. */
 	// Scrolling.
-	ClassDB::bind_method(D_METHOD("set_smooth_scroll_enable", "enable"), &TextEdit::set_smooth_scroll_enabled);
+	ClassDB::bind_method(D_METHOD("set_smooth_scroll_enabled", "enable"), &TextEdit::set_smooth_scroll_enabled);
 	ClassDB::bind_method(D_METHOD("is_smooth_scroll_enabled"), &TextEdit::is_smooth_scroll_enabled);
 
 	ClassDB::bind_method(D_METHOD("set_v_scroll", "value"), &TextEdit::set_v_scroll);
@@ -5300,6 +5327,9 @@ void TextEdit::_bind_methods() {
 
 	ClassDB::bind_method(D_METHOD("set_v_scroll_speed", "speed"), &TextEdit::set_v_scroll_speed);
 	ClassDB::bind_method(D_METHOD("get_v_scroll_speed"), &TextEdit::get_v_scroll_speed);
+
+	ClassDB::bind_method(D_METHOD("set_fit_content_height_enabled"), &TextEdit::set_fit_content_height_enabled);
+	ClassDB::bind_method(D_METHOD("is_fit_content_height_enabled"), &TextEdit::is_fit_content_height_enabled);
 
 	ClassDB::bind_method(D_METHOD("get_scroll_pos_for_line", "line", "wrap_index"), &TextEdit::get_scroll_pos_for_line, DEFVAL(0));
 
@@ -5405,6 +5435,7 @@ void TextEdit::_bind_methods() {
 	ADD_PROPERTY(PropertyInfo(Variant::BOOL, "shortcut_keys_enabled"), "set_shortcut_keys_enabled", "is_shortcut_keys_enabled");
 	ADD_PROPERTY(PropertyInfo(Variant::BOOL, "selecting_enabled"), "set_selecting_enabled", "is_selecting_enabled");
 	ADD_PROPERTY(PropertyInfo(Variant::BOOL, "deselect_on_focus_loss_enabled"), "set_deselect_on_focus_loss_enabled", "is_deselect_on_focus_loss_enabled");
+	ADD_PROPERTY(PropertyInfo(Variant::BOOL, "drag_and_drop_selection_enabled"), "set_drag_and_drop_selection_enabled", "is_drag_and_drop_selection_enabled");
 	ADD_PROPERTY(PropertyInfo(Variant::BOOL, "virtual_keyboard_enabled"), "set_virtual_keyboard_enabled", "is_virtual_keyboard_enabled");
 	ADD_PROPERTY(PropertyInfo(Variant::BOOL, "middle_mouse_paste_enabled"), "set_middle_mouse_paste_enabled", "is_middle_mouse_paste_enabled");
 	ADD_PROPERTY(PropertyInfo(Variant::INT, "wrap_mode", PROPERTY_HINT_ENUM, "None,Boundary"), "set_line_wrapping_mode", "get_line_wrapping_mode");
@@ -5419,11 +5450,12 @@ void TextEdit::_bind_methods() {
 	ADD_PROPERTY(PropertyInfo(Variant::OBJECT, "syntax_highlighter", PROPERTY_HINT_RESOURCE_TYPE, "SyntaxHighlighter", PROPERTY_USAGE_DEFAULT | PROPERTY_USAGE_DO_NOT_SHARE_ON_DUPLICATE), "set_syntax_highlighter", "get_syntax_highlighter");
 
 	ADD_GROUP("Scroll", "scroll_");
-	ADD_PROPERTY(PropertyInfo(Variant::BOOL, "scroll_smooth"), "set_smooth_scroll_enable", "is_smooth_scroll_enabled");
+	ADD_PROPERTY(PropertyInfo(Variant::BOOL, "scroll_smooth"), "set_smooth_scroll_enabled", "is_smooth_scroll_enabled");
 	ADD_PROPERTY(PropertyInfo(Variant::FLOAT, "scroll_v_scroll_speed", PROPERTY_HINT_NONE, "suffix:px/s"), "set_v_scroll_speed", "get_v_scroll_speed");
 	ADD_PROPERTY(PropertyInfo(Variant::BOOL, "scroll_past_end_of_file"), "set_scroll_past_end_of_file_enabled", "is_scroll_past_end_of_file_enabled");
 	ADD_PROPERTY(PropertyInfo(Variant::FLOAT, "scroll_vertical", PROPERTY_HINT_NONE, "suffix:px"), "set_v_scroll", "get_v_scroll");
 	ADD_PROPERTY(PropertyInfo(Variant::INT, "scroll_horizontal", PROPERTY_HINT_NONE, "suffix:px"), "set_h_scroll", "get_h_scroll");
+	ADD_PROPERTY(PropertyInfo(Variant::BOOL, "scroll_fit_content_height"), "set_fit_content_height_enabled", "is_fit_content_height_enabled");
 
 	ADD_GROUP("Minimap", "minimap_");
 	ADD_PROPERTY(PropertyInfo(Variant::BOOL, "minimap_draw"), "set_draw_minimap", "is_drawing_minimap");
@@ -6183,6 +6215,11 @@ void TextEdit::_update_scrollbars() {
 
 	if (draw_minimap) {
 		total_width += minimap_width;
+	}
+
+	content_height_cache = MAX(total_rows, 1) * get_line_height();
+	if (fit_content_height) {
+		update_minimum_size();
 	}
 
 	updating_scrolls = true;
