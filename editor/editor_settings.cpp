@@ -1377,11 +1377,19 @@ void EditorSettings::add_shortcut(const String &p_name, const Ref<Shortcut> &p_s
 	shortcuts[p_name] = p_shortcut;
 }
 
+void EditorSettings::remove_shortcut(const String &p_name) {
+	shortcuts.erase(p_name);
+}
+
 bool EditorSettings::is_shortcut(const String &p_name, const Ref<InputEvent> &p_event) const {
 	HashMap<String, Ref<Shortcut>>::ConstIterator E = shortcuts.find(p_name);
 	ERR_FAIL_COND_V_MSG(!E, false, "Unknown Shortcut: " + p_name + ".");
 
 	return E->value->matches_event(p_event);
+}
+
+bool EditorSettings::has_shortcut(const String &p_name) const {
+	return get_shortcut(p_name).is_valid();
 }
 
 Ref<Shortcut> EditorSettings::get_shortcut(const String &p_name) const {
@@ -1418,6 +1426,17 @@ Ref<Shortcut> EditorSettings::get_shortcut(const String &p_name) const {
 	}
 
 	return Ref<Shortcut>();
+}
+
+Vector<String> EditorSettings::_get_shortcut_list() {
+	List<String> shortcuts;
+	get_shortcut_list(&shortcuts);
+	Vector<String> ret;
+	while (shortcuts.size()) {
+		ret.push_back(shortcuts.front()->get());
+		shortcuts.pop_front();
+	}
+	return ret;
 }
 
 void EditorSettings::get_shortcut_list(List<String> *r_shortcuts) {
@@ -1639,6 +1658,13 @@ void EditorSettings::_bind_methods() {
 	ClassDB::bind_method(D_METHOD("get_recent_dirs"), &EditorSettings::get_recent_dirs);
 
 	ClassDB::bind_method(D_METHOD("set_builtin_action_override", "name", "actions_list"), &EditorSettings::set_builtin_action_override);
+
+	ClassDB::bind_method(D_METHOD("add_shortcut", "name", "shortcut"), &EditorSettings::add_shortcut);
+	ClassDB::bind_method(D_METHOD("remove_shortcut", "name"), &EditorSettings::remove_shortcut);
+	ClassDB::bind_method(D_METHOD("is_shortcut", "name", "event"), &EditorSettings::is_shortcut);
+	ClassDB::bind_method(D_METHOD("has_shortcut", "name"), &EditorSettings::has_shortcut);
+	ClassDB::bind_method(D_METHOD("get_shortcut", "name"), &EditorSettings::get_shortcut);
+	ClassDB::bind_method(D_METHOD("get_shortcut_list"), &EditorSettings::_get_shortcut_list);
 
 	ClassDB::bind_method(D_METHOD("check_changed_settings_in_group", "setting_prefix"), &EditorSettings::check_changed_settings_in_group);
 	ClassDB::bind_method(D_METHOD("get_changed_settings"), &EditorSettings::get_changed_settings);
