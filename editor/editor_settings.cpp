@@ -1377,8 +1377,31 @@ void EditorSettings::add_shortcut(const String &p_name, const Ref<Shortcut> &p_s
 	shortcuts[p_name] = p_shortcut;
 }
 
-void EditorSettings::remove_shortcut(const String &p_name) {
-	shortcuts.erase(p_name);
+void EditorSettings::_add_shortcut(const String &p_path, const String &p_name, Ref<Shortcut> p_shortcut) {
+	Array use_events = p_shortcut->get_events();
+	if (shortcuts.has(p_path)) {
+		auto existing = shortcuts.get(p_path);
+		if (!existing->has_meta("original")) {
+			// Loaded from editor settings, but plugin not loaded yet.
+			// Keep the events from editor settings but still override the shortcut in the shortcuts map
+			use_events = existing->get_events();
+		} else if (!Shortcut::is_event_array_equal(existing->get_events(), existing->get_meta("original"))) {
+			// Shortcut exists and is customised - don't override with default.
+			return;
+		}
+	}
+
+	p_shortcut->set_name(p_name);
+	p_shortcut->set_meta("original", p_shortcut->get_events());
+	p_shortcut->set_meta("from_scripting", true);
+	p_shortcut->set_events(use_events);
+	shortcuts[p_path] = p_shortcut;
+}
+
+void EditorSettings::remove_shortcut(const String &p_path) {
+	ERR_FAIL_COND_MSG(!shortcuts.has(p_path), "Cannot remove nonexisting shortcut: " + p_path);
+	ERR_FAIL_COND_MSG(!shortcuts[p_path]->get_meta("from_scripting", false), "Cannot remove built-in Godot shortcut: " + p_path);
+	shortcuts.erase(p_path);
 }
 
 bool EditorSettings::is_shortcut(const String &p_name, const Ref<InputEvent> &p_event) const {
@@ -1659,7 +1682,7 @@ void EditorSettings::_bind_methods() {
 
 	ClassDB::bind_method(D_METHOD("set_builtin_action_override", "name", "actions_list"), &EditorSettings::set_builtin_action_override);
 
-	ClassDB::bind_method(D_METHOD("add_shortcut", "name", "shortcut"), &EditorSettings::add_shortcut);
+	ClassDB::bind_method(D_METHOD("add_shortcut", "path", "name", "shortcut"), &EditorSettings::_add_shortcut);
 	ClassDB::bind_method(D_METHOD("remove_shortcut", "name"), &EditorSettings::remove_shortcut);
 	ClassDB::bind_method(D_METHOD("is_shortcut", "name", "event"), &EditorSettings::is_shortcut);
 	ClassDB::bind_method(D_METHOD("has_shortcut", "name"), &EditorSettings::has_shortcut);

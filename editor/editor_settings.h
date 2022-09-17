@@ -103,6 +103,8 @@ private:
 	bool _property_can_revert(const StringName &p_name) const;
 	bool _property_get_revert(const StringName &p_name, Variant &r_property) const;
 
+	void _add_shortcut(const String &p_path, const String &p_name, Ref<Shortcut> p_shortcut);
+
 	void _load_defaults(Ref<ConfigFile> p_extra_config = Ref<ConfigFile>());
 	void _load_godot2_text_editor_theme();
 	bool _save_text_editor_theme(String p_file);
@@ -174,7 +176,7 @@ public:
 	float get_auto_display_scale() const;
 
 	void add_shortcut(const String &p_name, const Ref<Shortcut> &p_shortcut);
-	void remove_shortcut(const String &p_name);
+	void remove_shortcut(const String &p_path);
 	bool is_shortcut(const String &p_name, const Ref<InputEvent> &p_event) const;
 	bool has_shortcut(const String &p_name) const;
 	Ref<Shortcut> get_shortcut(const String &p_name) const;
