@@ -38,6 +38,7 @@
 #include "scene/resources/syntax_highlighter.h"
 #include "scene/resources/text_file.h"
 
+class FindInFilesDialog2;
 class EditorFileDialog;
 class EditorHelpSearch;
 class FindReplaceBar;
@@ -312,7 +313,7 @@ class ScriptEditor : public PanelContainer {
 	Button *script_back = nullptr;
 	Button *script_forward = nullptr;
 
-	FindInFilesDialog *find_in_files_dialog = nullptr;
+	FindInFilesDialog2 *find_in_files_dialog = nullptr;
 	FindInFilesPanel *find_in_files = nullptr;
 	Button *find_in_files_button = nullptr;
 
@@ -503,13 +504,15 @@ protected:
 public:
 	static ScriptEditor *get_singleton() { return script_editor; }
 
+	ScriptEditorBase *create_script_editor(Ref<Resource> p_for_resource) const;
+
 	bool toggle_scripts_panel();
 	bool is_scripts_panel_toggled();
 	void apply_scripts() const;
 	void reload_scripts(bool p_refresh_only = false);
 	void open_script_create_dialog(const String &p_base_name, const String &p_base_path);
 	void open_text_file_create_dialog(const String &p_base_path, const String &p_base_name = "");
-	Ref<Resource> open_file(const String &p_file);
+	Ref<Resource> open_file(const String &p_file, bool p_open_in_main_editor = true);
 
 	void ensure_select_current();
 

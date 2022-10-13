@@ -55,6 +55,7 @@
 #include "editor/gui/editor_run_bar.h"
 #include "editor/gui/editor_toaster.h"
 #include "editor/inspector_dock.h"
+#include "editor/find_in_files_2.h"
 #include "editor/node_dock.h"
 #include "editor/plugins/shader_editor_plugin.h"
 #include "editor/plugins/text_shader_editor.h"
@@ -1165,6 +1166,40 @@ TypedArray<Script> ScriptEditor::_get_open_scripts() const {
 		ret.push_back(scripts[idx_script]);
 	}
 	return ret;
+}
+
+ScriptEditorBase *ScriptEditor::create_script_editor(Ref<Resource> p_for_resource) const {
+	ScriptEditorBase *se = nullptr;
+
+	for (int i = script_editor_func_count - 1; i >= 0; i--) {
+		se = script_editor_funcs[i](p_for_resource);
+		if (se) {
+			break;
+		}
+	}
+	ERR_FAIL_COND_V(!se, nullptr);
+
+	Ref<Script> scr = p_for_resource;
+	if (!p_for_resource->is_class("VisualScript")) {
+		bool highlighter_set = false;
+		for (int i = 0; i < syntax_highlighters.size(); i++) {
+			Ref<EditorSyntaxHighlighter> highlighter = syntax_highlighters[i]->_create();
+			if (highlighter.is_null()) {
+				continue;
+			}
+			se->add_syntax_highlighter(highlighter);
+
+			if (scr != nullptr && !highlighter_set) {
+				PackedStringArray languages = highlighter->_get_supported_languages();
+				if (languages.has(scr->get_language()->get_name())) {
+					se->set_syntax_highlighter(highlighter);
+					highlighter_set = true;
+				}
+			}
+		}
+	}
+
+	return se;
 }
 
 bool ScriptEditor::toggle_scripts_panel() {
@@ -2386,16 +2421,8 @@ bool ScriptEditor::edit(const Ref<Resource> &p_resource, int p_line, int p_col, 
 
 	// doesn't have it, make a new one
 
-	ScriptEditorBase *se = nullptr;
-
-	for (int i = script_editor_func_count - 1; i >= 0; i--) {
-		se = script_editor_funcs[i](p_resource);
-		if (se) {
-			break;
-		}
-	}
-	ERR_FAIL_NULL_V(se, false);
-
+	ScriptEditorBase *se = create_script_editor(p_resource);
+	ERR_FAIL_COND_V(!se, false);
 	se->set_edited_resource(p_resource);
 
 	// Syntax highlighting.
@@ -2665,7 +2692,8 @@ void ScriptEditor::open_text_file_create_dialog(const String &p_base_path, const
 	open_textfile_after_create = false;
 }
 
-Ref<Resource> ScriptEditor::open_file(const String &p_file) {
+// TODO: rather than a new param, perhaps a new method? ReadFile(p_file)?
+Ref<Resource> ScriptEditor::open_file(const String &p_file, bool p_open_in_main_editor) {
 	List<String> extensions;
 	ResourceLoader::get_recognized_extensions_for_type("Script", &extensions);
 	ResourceLoader::get_recognized_extensions_for_type("JSON", &extensions);
@@ -2676,7 +2704,9 @@ Ref<Resource> ScriptEditor::open_file(const String &p_file) {
 			return Ref<Resource>();
 		}
 
-		edit(scr);
+		if (p_open_in_main_editor) {
+			edit(scr);
+		}
 		return scr;
 	}
 
@@ -2688,7 +2718,9 @@ Ref<Resource> ScriptEditor::open_file(const String &p_file) {
 	}
 
 	if (text_file.is_valid()) {
-		edit(text_file);
+		if (p_open_in_main_editor) {
+			edit(text_file);
+		}
 		return text_file;
 	}
 	return Ref<Resource>();
@@ -3643,15 +3675,15 @@ void ScriptEditor::_script_changed() {
 }
 
 void ScriptEditor::_on_find_in_files_requested(String text) {
-	find_in_files_dialog->set_find_in_files_mode(FindInFilesDialog::SEARCH_MODE);
-	find_in_files_dialog->set_search_text(text);
-	find_in_files_dialog->popup_centered();
+	// find_in_files_dialog->set_find_in_files_mode(FindInFilesDialog::SEARCH_MODE);
+	// find_in_files_dialog->set_search_text(text);
+	find_in_files_dialog->popup_centered_ratio(0.5);
 }
 
 void ScriptEditor::_on_replace_in_files_requested(String text) {
-	find_in_files_dialog->set_find_in_files_mode(FindInFilesDialog::REPLACE_MODE);
-	find_in_files_dialog->set_search_text(text);
-	find_in_files_dialog->set_replace_text("");
+	// find_in_files_dialog->set_find_in_files_mode(FindInFilesDialog::REPLACE_MODE);
+	// find_in_files_dialog->set_search_text(text);
+	// find_in_files_dialog->set_replace_text("");
 	find_in_files_dialog->popup_centered();
 }
 
@@ -3762,17 +3794,17 @@ void ScriptEditor::_on_find_in_files_result_selected(String fpath, int line_numb
 }
 
 void ScriptEditor::_start_find_in_files(bool with_replace) {
-	FindInFiles *f = find_in_files->get_finder();
-
-	f->set_search_text(find_in_files_dialog->get_search_text());
-	f->set_match_case(find_in_files_dialog->is_match_case());
-	f->set_whole_words(find_in_files_dialog->is_whole_words());
-	f->set_folder(find_in_files_dialog->get_folder());
-	f->set_filter(find_in_files_dialog->get_filter());
-
-	find_in_files->set_with_replace(with_replace);
-	find_in_files->set_replace_text(find_in_files_dialog->get_replace_text());
-	find_in_files->start_search();
+	// FindInFiles *f = find_in_files->get_finder();
+	//
+	// f->set_search_text(find_in_files_dialog->get_search_text());
+	// f->set_match_case(find_in_files_dialog->is_match_case());
+	// f->set_whole_words(find_in_files_dialog->is_whole_words());
+	// f->set_folder(find_in_files_dialog->get_folder());
+	// f->set_filter(find_in_files_dialog->get_filter());
+	//
+	// find_in_files->set_with_replace(with_replace);
+	// find_in_files->set_replace_text(find_in_files_dialog->get_replace_text());
+	// find_in_files->start_search();
 
 	EditorNode::get_singleton()->make_bottom_panel_item_visible(find_in_files);
 }
@@ -4137,9 +4169,9 @@ ScriptEditor::ScriptEditor(WindowWrapper *p_wrapper) {
 	add_child(help_search_dialog);
 	help_search_dialog->connect("go_to_help", callable_mp(this, &ScriptEditor::_help_class_goto));
 
-	find_in_files_dialog = memnew(FindInFilesDialog);
-	find_in_files_dialog->connect(FindInFilesDialog::SIGNAL_FIND_REQUESTED, callable_mp(this, &ScriptEditor::_start_find_in_files).bind(false));
-	find_in_files_dialog->connect(FindInFilesDialog::SIGNAL_REPLACE_REQUESTED, callable_mp(this, &ScriptEditor::_start_find_in_files).bind(true));
+	find_in_files_dialog = memnew(FindInFilesDialog2);
+	// find_in_files_dialog->connect(FindInFilesDialog::SIGNAL_FIND_REQUESTED, callable_mp(this, &ScriptEditor::_start_find_in_files).bind(false));
+	// find_in_files_dialog->connect(FindInFilesDialog::SIGNAL_REPLACE_REQUESTED, callable_mp(this, &ScriptEditor::_start_find_in_files).bind(true));
 	add_child(find_in_files_dialog);
 	find_in_files = memnew(FindInFilesPanel);
 	find_in_files_button = EditorNode::get_singleton()->add_bottom_panel_item(TTR("Search Results"), find_in_files);
