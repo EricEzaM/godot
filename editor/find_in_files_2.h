@@ -47,9 +47,8 @@ class FindInFilesSearcher : public Object {
 	_THREAD_SAFE_CLASS_
 public:
 	struct FindResult {
-		int search_id = 0;
-
 		String path = "";
+
 		String line_begin_string = "";
 
 		int start_line = 0;
@@ -60,8 +59,8 @@ public:
 
 		FindResult() {}
 
-		FindResult(int p_id, const String &p_path, const String &p_line_string, int p_start_line, int p_start_col, int p_end_line, int p_end_col) :
-				search_id(p_id), path(p_path), line_begin_string(p_line_string), start_line(p_start_line), start_col(p_start_col), end_line(p_end_line), end_col(p_end_col) {}
+		FindResult(const String &p_path, const String &p_line_string, int p_start_line, int p_start_col, int p_end_line, int p_end_col) :
+				path(p_path), line_begin_string(p_line_string), start_line(p_start_line), start_col(p_start_col), end_line(p_end_line), end_col(p_end_col) {}
 	};
 
 	struct FindInFilesStatus {
@@ -71,7 +70,6 @@ public:
 	};
 
 private:
-	int search_id;
 	bool cancel_flag;
 
 	FindInFilesStatus status;
@@ -114,8 +112,6 @@ public:
 
 	void set_use_regex(bool p_use_regex);
 	bool is_using_regex() const;
-
-	int get_search_id() const;
 
 	void start();
 	void stop();
@@ -160,7 +156,7 @@ public:
 		REPLACE_MODE
 	};
 
-	void _on_result_found(int search_id, const String &p_path, const String &p_line_string, const PackedInt32Array &p_location_data);
+	void _on_result_found(const String &p_path, const String &p_line_string, int p_start_line, int p_start_col, int p_end_line, int p_end_col);
 	FindInFilesDialog2();
 };
 

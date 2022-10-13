@@ -168,9 +168,8 @@ void FindInFilesSearcher::_get_matches_from_file(const String &p_path, Vector<Fi
 		int end_line_start_idx = file_text.rfindn("\n", match_end_idx) + 1;
 		int end_col = match_end_idx - end_line_start_idx;
 
-		p_results.push_back(FindResult(search_id, p_path, lines[start_line], start_line, start_col, end_line, end_col));
-		const PackedInt32Array location_data = { start_line, start_col, end_line, end_col };
-		call_deferred("emit_signal", "result_found", search_id, p_path, lines[start_line], location_data);
+		p_results.push_back(FindResult(p_path, lines[start_line], start_line, start_col, end_line, end_col));
+		call_deferred("emit_signal", "result_found", p_path, lines[start_line], start_line, start_col, end_line, end_col);
 	}
 }
 
@@ -183,10 +182,12 @@ void FindInFilesSearcher::_update_status(const String &p_text, const float p_pro
 
 void FindInFilesSearcher::_bind_methods() {
 	ADD_SIGNAL(MethodInfo("result_found",
-			PropertyInfo(Variant::INT, "search_id"),
 			PropertyInfo(Variant::STRING, "path"),
 			PropertyInfo(Variant::STRING, "start_line_string"),
-			PropertyInfo(Variant::PACKED_INT32_ARRAY, "location_data")));
+			PropertyInfo(Variant::INT, "start_line"),
+			PropertyInfo(Variant::INT, "start_col"),
+			PropertyInfo(Variant::INT, "end_line"),
+			PropertyInfo(Variant::INT, "end_col")));
 }
 
 FindInFilesSearcher::FindInFilesStatus FindInFilesSearcher::get_status() const {
@@ -194,14 +195,9 @@ FindInFilesSearcher::FindInFilesStatus FindInFilesSearcher::get_status() const {
 	return status;
 }
 
-int FindInFilesSearcher::get_search_id() const {
-	_THREAD_SAFE_METHOD_
-	return search_id;
-}
-
 void FindInFilesSearcher::start() {
 	_THREAD_SAFE_METHOD_
-	search_id++;
+	// cancel_flag = false;
 	worker_thread_wait.post();
 }
 
@@ -234,17 +230,7 @@ void FindInFilesDialog2::_bind_methods() {
 	ClassDB::bind_method("_draw_result_text", &FindInFilesDialog2::_draw_result_text);
 }
 
-void FindInFilesDialog2::_on_result_found(int search_id, const String &p_path, const String &p_line_string, const PackedInt32Array &p_location_data) {
-	if (search_id != searcher->get_search_id()) {
-		return;
-	}
-	ERR_FAIL_INDEX_MSG(3, p_location_data.size(), "Malformed location data.");
-
-	int p_start_line = p_location_data[0];
-	int p_start_col = p_location_data[1];
-	int p_end_line = p_location_data[2];
-	int p_end_col = p_location_data[3];
-
+void FindInFilesDialog2::_on_result_found(const String &p_path, const String &p_line_string, int p_start_line, int p_start_col, int p_end_line, int p_end_col) {
 	String result_id = vformat("%s_%s_%s_%s_%s", p_path, p_start_line, p_start_col, p_end_line, p_end_col);
 
 	TreeItem *item = results->create_item();
@@ -259,7 +245,7 @@ void FindInFilesDialog2::_on_result_found(int search_id, const String &p_path, c
 	item->set_metadata(0, p_path);
 	item->set_meta("id", result_id);
 
-	result_items[result_id] = FindInFilesSearcher::FindResult(search_id, p_path, p_line_string, p_start_line, p_start_col, p_end_line, p_end_col);
+	result_items[result_id] = FindInFilesSearcher::FindResult(p_path, p_line_string, p_start_line, p_start_col, p_end_line, p_end_col);
 }
 
 FindInFilesDialog2::FindInFilesDialog2() {
