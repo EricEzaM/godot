@@ -70,6 +70,7 @@ public:
 	};
 
 private:
+	int search_id;
 	bool cancel_flag;
 
 	FindInFilesStatus status;
@@ -89,6 +90,7 @@ private:
 
 	static void _thread_func(void *self);
 	void _thread_process();
+	int _get_search_id() const;
 
 	bool _is_cancelled() const;
 	void _reset_cancelled();

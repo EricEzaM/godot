@@ -50,9 +50,9 @@ void FindInFilesSearcher::_thread_func(void *self) {
 void FindInFilesSearcher::_thread_process() {
 	while (true) {
 		worker_thread_wait.wait();
-		_thread_safe_.lock();
-		cancel_flag = false;
-		_thread_safe_.unlock();
+		_reset_cancelled();
+		int start_search_id = _get_search_id();
+
 		PackedStringArray filepaths;
 		_get_files_from_dir("res://" + directory, allowed_extensions, filepaths);
 
@@ -69,14 +69,20 @@ void FindInFilesSearcher::_thread_process() {
 			}
 			_get_matches_from_file(filepath, results);
 			done++;
-			if (_is_cancelled()) {
+			if (_is_cancelled() || _get_search_id() != start_search_id) {
 				break;
 			}
+
 			_update_status(vformat("searching files..."), ((float)done / filepaths.size()), results);
 
 			OS::get_singleton()->delay_usec(15000);
 		}
 	}
+}
+
+int FindInFilesSearcher::_get_search_id() const {
+	_THREAD_SAFE_METHOD_
+	return search_id;
 }
 
 bool FindInFilesSearcher::_is_cancelled() const {
@@ -253,10 +259,10 @@ FindInFilesDialog2::FindInFilesDialog2() {
 	set_title(TTR("Find in Files"));
 
 	searcher = memnew(FindInFilesSearcher);
-	searcher->connect("result_found", callable_mp(this, &FindInFilesDialog2::_on_result_found));
+	// searcher->connect("result_found", callable_mp(this, &FindInFilesDialog2::_on_result_found));
 	update_poll_timer = memnew(Timer);
 	update_poll_timer->set_wait_time(0.01);
-	// update_poll_timer->connect("timeout", callable_mp(this, &FindInFilesDialog2::_update_search_status));
+	update_poll_timer->connect("timeout", callable_mp(this, &FindInFilesDialog2::_update_search_status));
 	add_child(update_poll_timer);
 
 	vbc = memnew(VBoxContainer);
