@@ -36,6 +36,7 @@
 #include "core/string/string_builder.h"
 #include "editor_node.h"
 #include "editor_scale.h"
+#include "editor_settings.h"
 #include "plugins/script_editor_plugin.h"
 #include "scene/gui/check_box.h"
 #include "scene/gui/file_dialog.h"
@@ -48,54 +49,44 @@ void FindInFilesSearcher::_thread_func(void *self) {
 }
 
 void FindInFilesSearcher::_thread_process() {
-	while (true) {
-		worker_thread_wait.wait();
-		_reset_cancelled();
-		int start_search_id = _get_search_id();
+	PackedStringArray filepaths;
+	_thread_get_files_from_dir("res://" + directory, allowed_extensions, filepaths);
 
-		PackedStringArray filepaths;
-		_get_files_from_dir("res://" + directory, allowed_extensions, filepaths);
+	if (_is_cancelled()) {
+		return;
+	}
+
+	// Search in files from dir
+	Vector<FindResult> results;
+	int searched = 0;
+	int searched_with_matches = 0;
+	bool limit_reached = false;
+	for (auto filepath : filepaths) {
+		if (_is_cancelled()) {
+			break;
+		}
+
+		int matches_from_file = _thread_get_matches_from_file(filepath, results);
+		searched++;
+		searched_with_matches += matches_from_file > 0 ? 1 : 0;
 
 		if (_is_cancelled()) {
-			continue;
+			break;
 		}
 
-		// Search in files from dir
-		Vector<FindResult> results;
-		int done = 0;
-		for (auto filepath : filepaths) {
-			if (_is_cancelled()) {
-				break;
-			}
-			_get_matches_from_file(filepath, results);
-			done++;
-			if (_is_cancelled() || _get_search_id() != start_search_id) {
-				break;
-			}
-
-			_update_status(vformat("searching files..."), ((float)done / filepaths.size()), results);
-
-			OS::get_singleton()->delay_usec(15000);
+		limit_reached = results.size() > get_result_limit();
+		if (limit_reached) {
+			break;
 		}
+
+		_update_status(false, searched, searched_with_matches, limit_reached, results);
+		OS::get_singleton()->delay_usec(15000);
 	}
+
+	_update_status(true, searched, searched_with_matches, limit_reached, results);
 }
 
-int FindInFilesSearcher::_get_search_id() const {
-	_THREAD_SAFE_METHOD_
-	return search_id;
-}
-
-bool FindInFilesSearcher::_is_cancelled() const {
-	_THREAD_SAFE_METHOD_
-	return cancel_flag;
-}
-
-void FindInFilesSearcher::_reset_cancelled() {
-	_THREAD_SAFE_METHOD_
-	cancel_flag = false;
-}
-
-void FindInFilesSearcher::_get_files_from_dir(const String &p_dir_path, const HashSet<String> &p_allowed_extensions, PackedStringArray &r_filepaths) {
+void FindInFilesSearcher::_thread_get_files_from_dir(const String &p_dir_path, const HashSet<String> &p_allowed_extensions, PackedStringArray &r_filepaths) {
 	Ref<DirAccess> dir = DirAccess::open(p_dir_path);
 
 	if (dir.is_null()) {
@@ -107,7 +98,7 @@ void FindInFilesSearcher::_get_files_from_dir(const String &p_dir_path, const Ha
 	PackedStringArray dir_files;
 	PackedStringArray dir_subdirs;
 
-	while (true) {
+	while (!_is_cancelled()) {
 		String name = dir->get_next();
 		if (name.is_empty()) {
 			break;
@@ -142,18 +133,17 @@ void FindInFilesSearcher::_get_files_from_dir(const String &p_dir_path, const Ha
 	}
 
 	r_filepaths.append_array(dir_files);
-	_update_status(vformat("scanning drive for files, found %s", r_filepaths.size()));
 
 	for (const String &dir_path : dir_subdirs) {
-		_get_files_from_dir(dir_path, p_allowed_extensions, r_filepaths);
+		_thread_get_files_from_dir(dir_path, p_allowed_extensions, r_filepaths);
 	}
 }
 
-void FindInFilesSearcher::_get_matches_from_file(const String &p_path, Vector<FindResult> &p_results) {
+int FindInFilesSearcher::_thread_get_matches_from_file(const String &p_path, Vector<FindResult> &p_results) const {
 	Ref<FileAccess> fa = FileAccess::open(p_path, FileAccess::ModeFlags::READ);
 
 	if (fa.is_null()) {
-		return;
+		return 0;
 	}
 
 	const String file_text = fa->get_as_text(true);
@@ -162,6 +152,10 @@ void FindInFilesSearcher::_get_matches_from_file(const String &p_path, Vector<Fi
 	TypedArray<RegExMatch> matches = regex.search_all(file_text);
 
 	for (int i = 0; i < matches.size(); ++i) {
+		if (_is_cancelled()) {
+			break;
+		}
+
 		Ref<RegExMatch> match = matches[i];
 		int match_start_idx = match->get_start(0);
 		int match_end_idx = match->get_end(match->get_group_count());
@@ -175,25 +169,31 @@ void FindInFilesSearcher::_get_matches_from_file(const String &p_path, Vector<Fi
 		int end_col = match_end_idx - end_line_start_idx;
 
 		p_results.push_back(FindResult(p_path, lines[start_line], start_line, start_col, end_line, end_col));
-		call_deferred("emit_signal", "result_found", p_path, lines[start_line], start_line, start_col, end_line, end_col);
 	}
+
+	return matches.size();
 }
 
-void FindInFilesSearcher::_update_status(const String &p_text, const float p_progress, const Vector<FindResult> &p_results) {
+void FindInFilesSearcher::_update_status(bool p_finished, int p_files_searched, int p_files_with_matches, int p_limit_reached, const Vector<FindResult> &p_results) {
 	_THREAD_SAFE_METHOD_
-	status.text = p_text;
-	status.progress = p_progress;
+	status.finished = p_finished;
+	status.files_searched = p_files_searched;
+	status.files_with_matches = p_files_with_matches;
+	status.limit_reached = p_limit_reached;
 	status.results = p_results;
 }
 
+bool FindInFilesSearcher::_is_cancelled() const {
+	_THREAD_SAFE_METHOD_
+	return is_cancelled;
+}
+
+void FindInFilesSearcher::_set_cancelled(bool p_cancelled) {
+	_THREAD_SAFE_METHOD_
+	is_cancelled = p_cancelled;
+}
+
 void FindInFilesSearcher::_bind_methods() {
-	ADD_SIGNAL(MethodInfo("result_found",
-			PropertyInfo(Variant::STRING, "path"),
-			PropertyInfo(Variant::STRING, "start_line_string"),
-			PropertyInfo(Variant::INT, "start_line"),
-			PropertyInfo(Variant::INT, "start_col"),
-			PropertyInfo(Variant::INT, "end_line"),
-			PropertyInfo(Variant::INT, "end_col")));
 }
 
 FindInFilesSearcher::FindInFilesStatus FindInFilesSearcher::get_status() const {
@@ -203,16 +203,23 @@ FindInFilesSearcher::FindInFilesStatus FindInFilesSearcher::get_status() const {
 
 void FindInFilesSearcher::start() {
 	_THREAD_SAFE_METHOD_
-	// cancel_flag = false;
-	worker_thread_wait.post();
+	is_cancelled = false;
+	worker_thread.start(_thread_func, this);
+
+	status = FindInFilesStatus();
 }
 
 void FindInFilesSearcher::stop() {
+	{
+		// Mark as cancelled in a separate scope so that we don't deadlock with _is_cancelled() in the thread.
+		_THREAD_SAFE_METHOD_
+		is_cancelled = true;
+	}
+	// Should be near-immediate as long as _is_cancelled() is checked often in the worker thread.
+	worker_thread.wait_to_finish();
+
 	_THREAD_SAFE_METHOD_
-	cancel_flag = true;
-	status.text = "";
-	status.progress = 1;
-	status.results = Vector<FindResult>();
+	status = FindInFilesStatus();
 }
 
 void FindInFilesSearcher::set_search_text(const String &p_text) {
@@ -225,10 +232,19 @@ void FindInFilesSearcher::set_search_text(const String &p_text) {
 	}
 }
 
+void FindInFilesSearcher::set_result_limit(int p_limit) {
+	_THREAD_SAFE_METHOD_
+	result_limit = p_limit;
+}
+
+int FindInFilesSearcher::get_result_limit() const {
+	_THREAD_SAFE_METHOD_
+	return result_limit;
+}
+
 FindInFilesSearcher::FindInFilesSearcher() {
 	regex_escape.compile("[-[\\]{}()*+?.,\\\\/^$|#\\s]");
 
-	worker_thread.start(_thread_func, this);
 	allowed_extensions.insert("gd");
 }
 
@@ -236,99 +252,49 @@ void FindInFilesDialog2::_bind_methods() {
 	ClassDB::bind_method("_draw_result_text", &FindInFilesDialog2::_draw_result_text);
 }
 
-void FindInFilesDialog2::_on_result_found(const String &p_path, const String &p_line_string, int p_start_line, int p_start_col, int p_end_line, int p_end_col) {
-	String result_id = vformat("%s_%s_%s_%s_%s", p_path, p_start_line, p_start_col, p_end_line, p_end_col);
-
-	TreeItem *item = results->create_item();
-	// Do this first because it resets properties of the cell...
-	item->set_cell_mode(0, TreeItem::CELL_MODE_CUSTOM);
-
-	String text = p_line_string;
-	text = text.strip_edges(true, false);
-
-	item->set_text(0, text);
-	item->set_custom_draw(0, this, "_draw_result_text");
-	item->set_metadata(0, p_path);
-	item->set_meta("id", result_id);
-
-	result_items[result_id] = FindInFilesSearcher::FindResult(p_path, p_line_string, p_start_line, p_start_col, p_end_line, p_end_col);
-}
-
-FindInFilesDialog2::FindInFilesDialog2() {
-	set_min_size(Size2(720 * EDSCALE, 500 * EDSCALE));
-	set_title(TTR("Find in Files"));
-
-	searcher = memnew(FindInFilesSearcher);
-	// searcher->connect("result_found", callable_mp(this, &FindInFilesDialog2::_on_result_found));
-	update_poll_timer = memnew(Timer);
-	update_poll_timer->set_wait_time(0.01);
-	update_poll_timer->connect("timeout", callable_mp(this, &FindInFilesDialog2::_update_search_status));
-	add_child(update_poll_timer);
-
-	vbc = memnew(VBoxContainer);
-	vbc->set_h_size_flags(Control::SIZE_EXPAND_FILL);
-	vbc->set_v_size_flags(Control::SIZE_EXPAND_FILL);
-	add_child(vbc);
-
-	status_display = memnew(Label);
-	vbc->add_child(status_display);
-
-	search_line_edit = memnew(LineEdit);
-	vbc->add_child(search_line_edit);
-	search_line_edit->connect("text_changed", callable_mp(this, &FindInFilesDialog2::_on_text_changed));
-
-	split = memnew(VSplitContainer);
-	split->set_anchors_and_offsets_preset(Control::PRESET_FULL_RECT);
-	split->set_v_size_flags(Control::SIZE_EXPAND_FILL);
-	vbc->add_child(split);
-
-	results = memnew(Tree);
-	results->add_theme_font_override("font", EditorNode::get_singleton()->get_gui_base()->get_theme_font(SNAME("source"), SNAME("EditorFonts")));
-	results->add_theme_font_size_override("font_size", EditorNode::get_singleton()->get_gui_base()->get_theme_font_size(SNAME("source_size"), SNAME("EditorFonts")));
-	results->set_v_size_flags(Control::SIZE_EXPAND_FILL);
-	results->connect("item_selected", callable_mp(this, &FindInFilesDialog2::_on_result_selected));
-	results->connect("item_activated", callable_mp(this, &FindInFilesDialog2::_on_result_activated));
-	results->set_hide_root(true);
-	results->set_select_mode(Tree::SELECT_ROW);
-	results->set_allow_rmb_select(true);
-	results->create_item(); // Root
-	split->add_child(results);
-
-	Label *placeholder = memnew(Label);
-	placeholder->set_v_size_flags(Control::SIZE_EXPAND_FILL);
-	placeholder->set_h_size_flags(Control::SIZE_EXPAND_FILL);
-	placeholder->set_text("Start typing search query to find in files.");
-	split->add_child(placeholder);
-
-	editor = nullptr;
-}
-
 void FindInFilesDialog2::_on_text_changed(const String &p_string) {
-	// update_poll_timer->stop();
+	update_poll_timer->stop();
 	searcher->stop(); // Cancel existing search.
 
 	result_items.clear();
 	results->clear();
 	results->create_item(); // Root.
 
+	_update_placeholder(!p_string.is_empty());
 	searcher->set_search_text(p_string);
+	if (p_string.is_empty()) {
+		_set_editor(nullptr);
+		status_display->set_text("");
+		return;
+	}
+
 	searcher->start(); // Start new search.
 	update_poll_timer->start();
 }
 
+void FindInFilesDialog2::_on_folder_selected(const String &p_path) {
+	folder_line_edit->set_text(p_path);
+}
+
+void FindInFilesDialog2::_on_folder_text_changed(const String &p_string) {
+	if (!p_string.begins_with("res://")) {
+		WARN_PRINT("Search directory must be within project folder, res://");
+		folder_line_edit->set_text(previous_folder_selection);
+		folder_line_edit->set_caret_column(folder_line_edit->get_text().size());
+	}
+}
+
 void FindInFilesDialog2::_set_editor(ScriptEditorBase *p_editor) {
-	if (split->get_child_count(false) == 2) {
-		Node *node = split->get_child(1, false);
-		split->remove_child(node);
+	if (bottom_container->get_child_count(false) == 2) {
+		Node *node = bottom_container->get_child(1, false);
+		bottom_container->remove_child(node);
 		node->queue_delete();
 	}
-	ERR_FAIL_COND_MSG(split->get_child_count(false) != 1, "Split container can only have one child before the editor is added to it!");
+	ERR_FAIL_COND_MSG(bottom_container->get_child_count(false) != 1, "Bottom Container can only have one child before the editor is added to it!");
 
 	editor = p_editor;
 	if (editor) {
-		split->add_child(editor);
-		editor->set_h_size_flags(Control::SIZE_EXPAND_FILL);
-		editor->set_v_size_flags(Control::SIZE_EXPAND_FILL);
+		bottom_container->add_child(editor);
 	}
 }
 
@@ -373,8 +339,13 @@ void FindInFilesDialog2::_on_result_activated() {
 
 void FindInFilesDialog2::_update_search_status() {
 	auto status = searcher->get_status();
-	String status_string = vformat("%s :: %0.2f :: %s results", status.text, status.progress, status.results.size());
-	print_line(status_string);
+	String status_string;
+	if (status.limit_reached) {
+		status_string = vformat("%s+ matches in %s+ files", status.results.size(), status.files_with_matches);
+	} else {
+		status_string = vformat("%s matches in %s files", status.results.size(), status.files_with_matches);
+	}
+
 	status_display->set_text(status_string);
 
 	for (const FindInFilesSearcher::FindResult &r : status.results) {
@@ -398,11 +369,13 @@ void FindInFilesDialog2::_update_search_status() {
 		result_items[result_id] = r;
 	}
 
-	if (status.progress >= 1) {
+	// Select first result when it is available - do not override user selection.
+	if (!results->get_selected() && results->get_root() && results->get_root()->get_first_child()) {
+		results->get_root()->get_first_child()->select(0);
+	}
+
+	if (status.finished) {
 		update_poll_timer->stop();
-		if (!results->get_selected() && results->get_root() && results->get_root()->get_first_child()) {
-			results->get_root()->get_first_child()->select(0);
-		}
 	}
 }
 
@@ -441,18 +414,145 @@ void FindInFilesDialog2::_draw_result_text(Object *item_obj, Rect2 rect) {
 	// Use the inverted accent color to help match rectangles stand out even on the currently selected line.
 	results->draw_rect(match_rect, get_theme_color(SNAME("accent_color"), SNAME("Editor")).inverted() * Color(1, 1, 1, 0.35f));
 
-	// Filename
+	// Filename + line number
 	Point2 file_string_pos = Point2(rect.get_end().x, rect.get_position().y);
-	const String file = r.path.get_file();
-	const Size2 file_string_size = font->get_string_size(file, HORIZONTAL_ALIGNMENT_RIGHT, -1, font_size);
+	const String file_text = vformat("%s: %s", r.path.get_file(), r.start_line);
+	const Size2 file_string_size = font->get_string_size(file_text, HORIZONTAL_ALIGNMENT_RIGHT, -1, font_size);
 
 	file_string_pos.x -= 2 * EDSCALE + file_string_size.width;
 	file_string_pos.y += rect.size.y - file_string_size.y / 2;
 
-	results->draw_string(font, file_string_pos, file, HORIZONTAL_ALIGNMENT_RIGHT, -1, font_size, Color(1, 1, 1, 0.5f));
+	results->draw_string(font, file_string_pos, file_text, HORIZONTAL_ALIGNMENT_RIGHT, -1, font_size, Color(1, 1, 1, 0.4f));
+}
+
+void FindInFilesDialog2::_update_placeholder(bool p_is_searching) {
+	if (p_is_searching) {
+		placeholder->set_text("Searching...");
+	} else {
+		placeholder->set_text("Start typing search query to find in files.");
+	}
 }
 
 void FindInFilesDialog2::_notification(int p_what) {
 	switch (p_what) {
+		case NOTIFICATION_VISIBILITY_CHANGED: {
+			search_line_edit->grab_focus();
+			search_line_edit->select_all();
+		} break;
+		case NOTIFICATION_READY:
+		case NOTIFICATION_THEME_CHANGED: {
+			match_case_btn->set_icon(get_theme_icon(SNAME("MatchCase"), SNAME("EditorIcons")));
+			match_word_btn->set_icon(get_theme_icon(SNAME("int"), SNAME("EditorIcons")));
+			match_regex_btn->set_icon(get_theme_icon(SNAME("World3D"), SNAME("EditorIcons")));
+		} break;
 	}
+}
+
+FindInFilesDialog2::FindInFilesDialog2() {
+	set_min_size(Size2(720 * EDSCALE, 500 * EDSCALE));
+	set_title(TTR("Find in Files"));
+
+	searcher = memnew(FindInFilesSearcher);
+	searcher->set_result_limit(100);
+	update_poll_timer = memnew(Timer);
+	update_poll_timer->set_wait_time(0.05);
+	update_poll_timer->connect("timeout", callable_mp(this, &FindInFilesDialog2::_update_search_status));
+	add_child(update_poll_timer);
+
+	VBoxContainer *main_vbc = memnew(VBoxContainer);
+	main_vbc->set_h_size_flags(Control::SIZE_EXPAND_FILL);
+	main_vbc->set_v_size_flags(Control::SIZE_EXPAND_FILL);
+	add_child(main_vbc);
+
+	/* First line of controls - status, directory/file filter. */
+	HBoxContainer *top_hbc = memnew(HBoxContainer);
+	main_vbc->add_child(top_hbc);
+
+	status_display = memnew(Label);
+	top_hbc->add_child(status_display);
+
+	top_hbc->add_spacer();
+
+	/* Second line of controls - search related */
+	HBoxContainer *search_hbc = memnew(HBoxContainer);
+	main_vbc->add_child(search_hbc);
+
+	search_line_edit = memnew(LineEdit);
+	search_line_edit->set_clear_button_enabled(true);
+	search_line_edit->set_h_size_flags(Control::SIZE_EXPAND_FILL);
+	search_line_edit->connect("text_changed", callable_mp(this, &FindInFilesDialog2::_on_text_changed));
+	search_hbc->add_child(search_line_edit);
+
+	match_case_btn = memnew(Button);
+	match_case_btn->set_flat(true);
+	match_case_btn->set_toggle_mode(true);
+	match_case_btn->set_tooltip_text(TTR("Match case"));
+	search_hbc->add_child(match_case_btn);
+
+	match_word_btn = memnew(Button);
+	match_word_btn->set_flat(true);
+	match_word_btn->set_toggle_mode(true);
+	match_word_btn->set_tooltip_text(TTR("Match whole words"));
+	search_hbc->add_child(match_word_btn);
+
+	match_regex_btn = memnew(Button);
+	match_regex_btn->set_flat(true);
+	match_regex_btn->set_toggle_mode(true);
+	match_regex_btn->set_tooltip_text(TTR("Use regular expressions (regex)"));
+	search_hbc->add_child(match_regex_btn);
+
+	/* Directory */
+	HBoxContainer *directory_hbc = memnew(HBoxContainer);
+	main_vbc->add_child(directory_hbc);
+
+	Label *dir_label = memnew(Label);
+	dir_label->set_text("Folder");
+	directory_hbc->add_child(dir_label);
+
+	folder_line_edit = memnew(LineEdit);
+	folder_line_edit->set_h_size_flags(Control::SIZE_EXPAND_FILL);
+	folder_line_edit->set_text(previous_folder_selection);
+	folder_line_edit->connect("text_changed", callable_mp(this, &FindInFilesDialog2::_on_folder_text_changed));
+	directory_hbc->add_child(folder_line_edit);
+
+	folder_dialog = memnew(FileDialog);
+	folder_dialog->set_file_mode(FileDialog::FILE_MODE_OPEN_DIR);
+	folder_dialog->connect("dir_selected", callable_mp(this, &FindInFilesDialog2::_on_folder_selected));
+	add_child(folder_dialog);
+
+	Button *folder_btn = memnew(Button);
+	folder_btn->set_text("...");
+	folder_btn->connect("pressed", callable_mp(folder_dialog, &FileDialog::popup_file_dialog));
+	directory_hbc->add_child(folder_btn);
+
+	/* The results list & editor */
+	split = memnew(VSplitContainer);
+	split->set_anchors_and_offsets_preset(Control::PRESET_FULL_RECT);
+	split->set_v_size_flags(Control::SIZE_EXPAND_FILL);
+	main_vbc->add_child(split);
+
+	results = memnew(Tree);
+	results->add_theme_font_override("font", EditorNode::get_singleton()->get_gui_base()->get_theme_font(SNAME("source"), SNAME("EditorFonts")));
+	results->add_theme_font_size_override("font_size", EditorNode::get_singleton()->get_gui_base()->get_theme_font_size(SNAME("source_size"), SNAME("EditorFonts")));
+	results->set_v_size_flags(Control::SIZE_EXPAND_FILL);
+	results->connect("item_selected", callable_mp(this, &FindInFilesDialog2::_on_result_selected));
+	results->connect("item_activated", callable_mp(this, &FindInFilesDialog2::_on_result_activated));
+	results->set_hide_root(true);
+	results->set_select_mode(Tree::SELECT_ROW);
+	results->set_allow_rmb_select(true);
+	results->create_item(); // Root
+	split->add_child(results);
+
+	bottom_container = memnew(PanelContainer);
+	bottom_container->set_v_size_flags(Control::SIZE_EXPAND_FILL);
+	split->add_child(bottom_container);
+
+	placeholder = memnew(Label);
+	placeholder->set_anchors_and_offsets_preset(Control::PRESET_CENTER);
+	placeholder->set_v_size_flags(Control::SIZE_EXPAND_FILL);
+	placeholder->set_h_size_flags(Control::SIZE_EXPAND_FILL);
+	_update_placeholder(false);
+	bottom_container->add_child(placeholder);
+
+	editor = nullptr;
 }

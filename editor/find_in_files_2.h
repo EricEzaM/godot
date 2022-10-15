@@ -64,22 +64,23 @@ public:
 	};
 
 	struct FindInFilesStatus {
-		String text;
-		float progress;
-		Vector<FindResult> results;
+		bool finished = false;
+		int files_searched = 0;
+		int files_with_matches = 0;
+		bool limit_reached = false;
+		Vector<FindResult> results = Vector<FindResult>();
 	};
 
 private:
-	int search_id;
-	bool cancel_flag;
+	bool is_cancelled;
 
 	FindInFilesStatus status;
-	Semaphore worker_thread_wait;
 	Thread worker_thread;
 
 	String text;
 	String directory;
 
+	int result_limit;
 	bool case_sensitive;
 	bool whole_words;
 	bool use_regex;
@@ -90,21 +91,28 @@ private:
 
 	static void _thread_func(void *self);
 	void _thread_process();
-	int _get_search_id() const;
+
+	void _thread_get_files_from_dir(const String &p_dir_path, const HashSet<String> &p_allowed_extensions, PackedStringArray &r_filepaths);
+	int _thread_get_matches_from_file(const String &p_path, Vector<FindResult> &p_results) const;
+
+	void _update_status(bool p_finished, int p_files_searched, int p_files_with_matches, int p_limit_reached, const Vector<FindResult> &p_results = Vector<FindResult>());
 
 	bool _is_cancelled() const;
-	void _reset_cancelled();
-
-	void _get_files_from_dir(const String &p_dir_path, const HashSet<String> &p_allowed_extensions, PackedStringArray &r_filepaths);
-	void _get_matches_from_file(const String &p_path, Vector<FindResult> &p_results);
-
-	void _update_status(const String &p_text, const float p_progress = 0.0f, const Vector<FindResult> &p_results = Vector<FindResult>());
+	void _set_cancelled(bool p_cancelled);
 
 protected:
 	static void _bind_methods();
 
 public:
+	FindInFilesStatus get_status() const;
+
+	void start();
+	void stop();
+
 	void set_search_text(const String &p_text);
+
+	void set_result_limit(int p_limit);
+	int get_result_limit() const;
 
 	void set_case_sensitive(bool p_case_sensitive);
 	bool is_case_sensitive() const;
@@ -115,11 +123,6 @@ public:
 	void set_use_regex(bool p_use_regex);
 	bool is_using_regex() const;
 
-	void start();
-	void stop();
-
-	FindInFilesStatus get_status() const;
-
 	FindInFilesSearcher();
 };
 
@@ -129,17 +132,29 @@ class FindInFilesDialog2 : public AcceptDialog {
 private:
 	HashMap<String, FindInFilesSearcher::FindResult> result_items;
 
-	VBoxContainer *vbc;
-	VSplitContainer *split;
-	ScriptEditorBase *editor;
-	Tree *results;
-	Timer *update_poll_timer;
 	Label *status_display;
+	LineEdit *folder_line_edit;
+	String previous_folder_selection = "res://";
+	FileDialog *folder_dialog;
+
 	LineEdit *search_line_edit;
+	Button *match_case_btn;
+	Button *match_word_btn;
+	Button *match_regex_btn;
+
+	VSplitContainer *split;
+	Tree *results;
+	PanelContainer *bottom_container;
+	ScriptEditorBase *editor;
+	Label *placeholder;
+
+	Timer *update_poll_timer;
 	FindInFilesSearcher *searcher;
 
 	void _update_search_status();
 	void _on_text_changed(const String &p_string);
+	void _on_folder_selected(const String &path);
+	void _on_folder_text_changed(const String &p_string);
 
 	void _set_editor(ScriptEditorBase *p_editor);
 
@@ -147,6 +162,8 @@ private:
 	void _on_result_activated();
 
 	void _draw_result_text(Object *item_obj, Rect2 rect);
+
+	void _update_placeholder(bool p_is_searching);
 
 protected:
 	void _notification(int p_what);
@@ -158,7 +175,6 @@ public:
 		REPLACE_MODE
 	};
 
-	void _on_result_found(const String &p_path, const String &p_line_string, int p_start_line, int p_start_col, int p_end_line, int p_end_col);
 	FindInFilesDialog2();
 };
 
