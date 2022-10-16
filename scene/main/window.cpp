@@ -1682,11 +1682,12 @@ void Window::popup_centered(const Size2i &p_minsize) {
 	popup(popup_rect);
 }
 
-void Window::popup_centered_ratio(float p_ratio) {
+void Window::popup_centered_ratio_xy(float p_ratio_x, float p_ratio_y) {
 	ERR_MAIN_THREAD_GUARD;
 	ERR_FAIL_COND(!is_inside_tree());
 	ERR_FAIL_COND_MSG(window_id == DisplayServer::MAIN_WINDOW_ID, "Can't popup the main window.");
-	ERR_FAIL_COND_MSG(p_ratio <= 0.0 || p_ratio > 1.0, "Ratio must be between 0.0 and 1.0!");
+	ERR_FAIL_COND_MSG(p_ratio_x <= 0.0 || p_ratio_x > 1.0, "Ratio X must be between 0.0 and 1.0!");
+	ERR_FAIL_COND_MSG(p_ratio_y <= 0.0 || p_ratio_y > 1.0, "Ratio Y must be between 0.0 and 1.0!");
 
 	Rect2 parent_rect;
 
@@ -1701,12 +1702,16 @@ void Window::popup_centered_ratio(float p_ratio) {
 
 	Rect2i popup_rect;
 	if (parent_rect != Rect2()) {
-		popup_rect.size = parent_rect.size * p_ratio;
+		popup_rect.size = parent_rect.size * Size2(p_ratio_x, p_ratio_y);
 		popup_rect.size = _clamp_window_size(popup_rect.size);
 		popup_rect.position = parent_rect.position + (parent_rect.size - popup_rect.size) / 2;
 	}
 
 	popup(popup_rect);
+}
+
+void Window::popup_centered_ratio(float p_ratio) {
+	popup_centered_ratio_xy(p_ratio, p_ratio);
 }
 
 void Window::popup(const Rect2i &p_screen_rect) {
