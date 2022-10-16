@@ -85,20 +85,22 @@ private:
 	bool whole_words;
 	bool use_regex;
 
-	RegEx regex_escape;
 	RegEx regex;
-	HashSet<String> allowed_extensions;
+	HashSet<String> allow_regex_strings;
+	HashSet<String> ignore_regex_strings;
 
 	static void _thread_func(void *self);
 	void _thread_process();
 
-	void _thread_get_files_from_dir(const String &p_dir_path, const HashSet<String> &p_allowed_extensions, PackedStringArray &r_filepaths);
+	void _thread_get_files_from_dir(const String &p_dir_path, const Vector<Ref<RegEx>> &p_allow_regex, const Vector<Ref<RegEx>> &p_ignore_regex, PackedStringArray &r_filepaths);
 	int _thread_get_matches_from_file(const String &p_path, Vector<FindResult> &p_results) const;
 
 	void _update_status(bool p_finished, int p_files_searched, int p_files_with_matches, int p_limit_reached, const Vector<FindResult> &p_results = Vector<FindResult>());
 
 	bool _is_cancelled() const;
 	void _set_cancelled(bool p_cancelled);
+
+	static String _regex_escape(const String &p_string, bool p_escape_asterisk = true);
 
 protected:
 	static void _bind_methods();
@@ -110,6 +112,9 @@ public:
 	void stop();
 
 	void set_search_text(const String &p_text);
+
+	void set_directory(const String &p_directory);
+	void set_file_filter(const String &p_file_filter);
 
 	void set_result_limit(int p_limit);
 	int get_result_limit() const;
@@ -129,32 +134,41 @@ public:
 class FindInFilesDialog2 : public AcceptDialog {
 	GDCLASS(FindInFilesDialog2, AcceptDialog);
 
-private:
+	Vector<String> recent_filters; // Start = oldest, End = newest
 	HashMap<String, FindInFilesSearcher::FindResult> result_items;
-
-	Label *status_display;
-	LineEdit *folder_line_edit;
-	String previous_folder_selection = "res://";
-	FileDialog *folder_dialog;
 
 	LineEdit *search_line_edit;
 	Button *match_case_btn;
 	Button *match_word_btn;
 	Button *match_regex_btn;
 
+	LineEdit *folder_line_edit;
+	String previous_folder_selection = "res://";
+	FileDialog *folder_dialog;
+	LineEdit *file_filter_line_edit;
+	CheckBox *file_filter_chkbx;
+	MenuButton *recent_file_filters_btn;
+
+	Label *status_display;
+	Label *current_file_display;
+	Label *current_file_folder_display;
+
 	VSplitContainer *split;
 	Tree *results;
-	PanelContainer *bottom_container;
+	PanelContainer *editor_container;
 	ScriptEditorBase *editor;
-	Label *placeholder;
 
 	Timer *update_poll_timer;
 	FindInFilesSearcher *searcher;
 
+	void _run_search();
+
 	void _update_search_status();
-	void _on_text_changed(const String &p_string);
+
 	void _on_folder_selected(const String &path);
 	void _on_folder_text_changed(const String &p_string);
+	void _on_file_filter_toggled(bool p_toggled_on);
+	void _on_recent_file_filter_selected(int p_idx);
 
 	void _set_editor(ScriptEditorBase *p_editor);
 
@@ -163,7 +177,9 @@ private:
 
 	void _draw_result_text(Object *item_obj, Rect2 rect);
 
-	void _update_placeholder(bool p_is_searching);
+	void _save_recent_filters(bool p_save_to_editor_cfg);
+	void _load_recent_filters();
+	void _update_recent_filters_menu();
 
 protected:
 	void _notification(int p_what);
