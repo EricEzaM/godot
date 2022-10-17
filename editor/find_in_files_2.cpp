@@ -49,10 +49,11 @@ void FindInFilesSearcher::_thread_func(void *self) {
 }
 
 void FindInFilesSearcher::_thread_process() {
+	SearchInputData input = _create_input_data();
 	PackedStringArray filepaths;
 
 	Vector<Ref<RegEx>> allow_regexs;
-	for (String allow_string : allow_regex_strings) {
+	for (String allow_string : input.allow_file_regex_strings) {
 		Ref<RegEx> re = RegEx::create_from_string(allow_string);
 		if (re.is_valid()) {
 			allow_regexs.append(re);
@@ -60,7 +61,7 @@ void FindInFilesSearcher::_thread_process() {
 	}
 
 	Vector<Ref<RegEx>> ignore_regexs;
-	for (String ignore_string : ignore_regex_strings) {
+	for (String ignore_string : input.ignore_file_regex_strings) {
 		Ref<RegEx> re = RegEx::create_from_string(ignore_string);
 		if (re.is_valid()) {
 			ignore_regexs.append(re);
@@ -71,11 +72,15 @@ void FindInFilesSearcher::_thread_process() {
 		return;
 	}
 
-	_thread_get_files_from_dir(directory, allow_regexs, ignore_regexs, filepaths);
+	_thread_get_files_from_dir(input.directory, allow_regexs, ignore_regexs, filepaths);
 
 	if (_is_cancelled()) {
 		return;
 	}
+
+	// Create regex to use in searching.
+	Ref<RegEx> regex = _get_regex(input.text, input.match_use_regex, input.match_case_sensitive, input.match_whole_words);
+	ERR_FAIL_COND_MSG(regex.is_null() || !regex->is_valid(), "Regular expression for search is invalid");
 
 	// Search in files from dir
 	Vector<FindResult> results;
@@ -87,7 +92,7 @@ void FindInFilesSearcher::_thread_process() {
 			break;
 		}
 
-		int matches_from_file = _thread_get_matches_from_file(filepath, results);
+		int matches_from_file = _thread_get_matches_from_file(filepath, results, regex);
 		searched++;
 		searched_with_matches += matches_from_file > 0 ? 1 : 0;
 
@@ -182,7 +187,7 @@ void FindInFilesSearcher::_thread_get_files_from_dir(const String &p_dir_path, c
 	}
 }
 
-int FindInFilesSearcher::_thread_get_matches_from_file(const String &p_path, Vector<FindResult> &p_results) const {
+int FindInFilesSearcher::_thread_get_matches_from_file(const String &p_path, Vector<FindResult> &p_results, const Ref<RegEx> &p_regex) const {
 	Ref<FileAccess> fa = FileAccess::open(p_path, FileAccess::ModeFlags::READ);
 
 	if (fa.is_null()) {
@@ -192,7 +197,7 @@ int FindInFilesSearcher::_thread_get_matches_from_file(const String &p_path, Vec
 	const String file_text = fa->get_as_text(true);
 	const PackedStringArray lines = file_text.split("\n");
 
-	TypedArray<RegExMatch> matches = regex.search_all(file_text);
+	TypedArray<RegExMatch> matches = p_regex->search_all(file_text);
 
 	for (int i = 0; i < matches.size(); ++i) {
 		if (_is_cancelled()) {
@@ -236,6 +241,19 @@ void FindInFilesSearcher::_set_cancelled(bool p_cancelled) {
 	is_cancelled = p_cancelled;
 }
 
+FindInFilesSearcher::SearchInputData FindInFilesSearcher::_create_input_data() const {
+	_THREAD_SAFE_METHOD_
+	return SearchInputData(
+			text,
+			directory,
+			allow_regex_strings,
+			ignore_regex_strings,
+			result_limit,
+			match_case_sensitive,
+			match_whole_words,
+			match_use_regex);
+}
+
 String FindInFilesSearcher::_regex_escape(const String &p_string, bool p_escape_asterisk) {
 	String str = p_string;
 	str = str.replace("\\", "\\\\")
@@ -263,6 +281,34 @@ String FindInFilesSearcher::_regex_escape(const String &p_string, bool p_escape_
 	return str;
 }
 
+Ref<RegEx> FindInFilesSearcher::_get_regex(const String &p_text, bool p_text_is_regex, bool p_case_sensitive, bool p_match_words) {
+	Ref<RegEx> regex;
+	regex.instantiate();
+
+	String use_text;
+	if (p_text_is_regex) {
+		use_text = p_text;
+		if (!p_case_sensitive) {
+			use_text = use_text.insert(0, "(?i)");
+		}
+	} else {
+		use_text = _regex_escape(p_text);
+		if (p_match_words) {
+			// See demo of this logic at regexr.com/70a29
+			const String non_space_regex = "[a-zA-Z0-9_]";
+			const String neg_lookbehind = vformat("(?<!%s)", non_space_regex);
+			const String neg_lookahead = vformat("(?!%s)", non_space_regex);
+			use_text = vformat("%s%s%s", neg_lookbehind, use_text, neg_lookahead);
+		}
+		if (!p_case_sensitive) {
+			use_text = use_text.insert(0, "(?i)");
+		}
+	}
+
+	regex->compile(use_text);
+	return regex;
+}
+
 void FindInFilesSearcher::_bind_methods() {
 }
 
@@ -274,9 +320,9 @@ FindInFilesSearcher::FindInFilesStatus FindInFilesSearcher::get_status() const {
 void FindInFilesSearcher::start() {
 	_THREAD_SAFE_METHOD_
 	is_cancelled = false;
-	worker_thread.start(_thread_func, this);
-
 	status = FindInFilesStatus();
+
+	worker_thread.start(_thread_func, this);
 }
 
 void FindInFilesSearcher::stop() {
@@ -292,28 +338,34 @@ void FindInFilesSearcher::stop() {
 	status = FindInFilesStatus();
 }
 
-void FindInFilesSearcher::set_search_text(const String &p_text) {
-	text = p_text;
-	if (use_regex) {
-		String use_text = p_text;
-		if (case_sensitive) {
-			use_text = use_text.insert(0, "(?i)");
-		}
-		regex.compile(use_text);
-	} else {
-		String use_text = _regex_escape(p_text);
-		if (case_sensitive) {
-			use_text = use_text.insert(0, "(?i)");
-		}
-		regex.compile(use_text);
+bool FindInFilesSearcher::is_valid() const {
+	_THREAD_SAFE_METHOD_
+	Ref<RegEx> regex = _get_regex(text, match_use_regex, match_case_sensitive, match_whole_words);
+
+	if (regex.is_null() || !regex->is_valid()) {
+		return false;
 	}
+
+	return true;
+}
+
+void FindInFilesSearcher::set_search_text(const String &p_text) {
+	_THREAD_SAFE_METHOD_
+	text = p_text;
+}
+
+String FindInFilesSearcher::get_search_text() const {
+	_THREAD_SAFE_METHOD_
+	return text;
 }
 
 void FindInFilesSearcher::set_directory(const String &p_directory) {
+	_THREAD_SAFE_METHOD_
 	directory = p_directory;
 }
 
 void FindInFilesSearcher::set_file_filter(const String &p_file_filter) {
+	_THREAD_SAFE_METHOD_
 	allow_regex_strings.clear();
 	ignore_regex_strings.clear();
 
@@ -351,22 +403,22 @@ int FindInFilesSearcher::get_result_limit() const {
 
 void FindInFilesSearcher::set_case_sensitive(bool p_case_sensitive) {
 	_THREAD_SAFE_METHOD_
-	case_sensitive = p_case_sensitive;
+	match_case_sensitive = p_case_sensitive;
 }
 
 bool FindInFilesSearcher::is_case_sensitive() const {
 	_THREAD_SAFE_METHOD_
-	return case_sensitive;
+	return match_case_sensitive;
 }
 
 void FindInFilesSearcher::set_whole_words(bool p_whole_words) {
 	_THREAD_SAFE_METHOD_
-	whole_words = p_whole_words;
+	match_whole_words = p_whole_words;
 }
 
 void FindInFilesSearcher::set_use_regex(bool p_use_regex) {
 	_THREAD_SAFE_METHOD_
-	use_regex = p_use_regex;
+	match_use_regex = p_use_regex;
 }
 
 FindInFilesSearcher::FindInFilesSearcher() {
@@ -404,6 +456,18 @@ void FindInFilesDialog2::_on_recent_file_filter_selected(int p_idx) {
 	_run_search();
 }
 
+void FindInFilesDialog2::_on_match_regex_toggled(bool p_toggled) {
+	// Match word is not compatible with regex.
+	if (p_toggled) {
+		match_word_btn->set_pressed(false);
+		match_word_btn->set_disabled(true);
+	} else {
+		match_word_btn->set_disabled(false);
+	}
+
+	_run_search();
+}
+
 void FindInFilesDialog2::_set_editor(ScriptEditorBase *p_editor) {
 	if (editor_container->get_child_count(false) == 1) {
 		Node *node = editor_container->get_child(0, false);
@@ -414,6 +478,11 @@ void FindInFilesDialog2::_set_editor(ScriptEditorBase *p_editor) {
 	editor = p_editor;
 	if (editor) {
 		editor_container->add_child(editor);
+		// Read only editing for now. Live editing in the dialog is in the 'too hard' basket.
+		Control *base_editor = editor->get_base_editor();
+		if (base_editor->has_method("set_editable")) {
+			base_editor->call("set_editable", false);
+		}
 	}
 }
 
@@ -463,13 +532,6 @@ void FindInFilesDialog2::_run_search() {
 	update_poll_timer->stop();
 	searcher->stop();
 
-	// Clear results
-	result_items.clear();
-	results->clear();
-	results->create_item();
-	current_file_display->set_text("");
-	current_file_folder_display->set_text("");
-
 	// Update searcher options for next search.
 	searcher->set_case_sensitive(match_case_btn->is_pressed());
 	searcher->set_whole_words(match_word_btn->is_pressed());
@@ -484,10 +546,26 @@ void FindInFilesDialog2::_run_search() {
 	const String search_string = search_line_edit->get_text();
 	searcher->set_search_text(search_string);
 
+	// Test if the search is valid and exit early if not.
+	if (searcher->is_valid()) {
+		search_validation->set_texture(Ref<Texture2D>());
+	} else {
+		search_validation->set_texture(get_theme_icon("StatusError", "EditorIcons"));
+		search_validation->set_tooltip_text(TTR("Search is not valid, please check the regular expression."));
+		return;
+	}
+
+	// Clear results
+	result_items.clear();
+	results->clear();
+	results->create_item();
+	current_file_display->set_text("");
+	current_file_folder_display->set_text("");
+
 	// Remove editor if search cleared.
 	if (search_string.is_empty()) {
 		_set_editor(nullptr);
-		status_display->set_text("");
+		status_display->set_text(TTR("Type a search query to find in files."));
 		return;
 	}
 
@@ -679,8 +757,8 @@ void FindInFilesDialog2::_notification(int p_what) {
 		case NOTIFICATION_READY:
 		case NOTIFICATION_THEME_CHANGED: {
 			match_case_btn->set_icon(get_theme_icon(SNAME("MatchCase"), SNAME("EditorIcons")));
-			match_word_btn->set_icon(get_theme_icon(SNAME("int"), SNAME("EditorIcons")));
-			match_regex_btn->set_icon(get_theme_icon(SNAME("World3D"), SNAME("EditorIcons")));
+			match_word_btn->set_icon(get_theme_icon(SNAME("MatchWord"), SNAME("EditorIcons")));
+			match_regex_btn->set_icon(get_theme_icon(SNAME("MatchRegex"), SNAME("EditorIcons")));
 
 			status_display->add_theme_font_override("font", get_theme_font(SNAME("bold"), SNAME("EditorFonts")));
 			current_file_folder_display->add_theme_color_override("font_color", current_file_folder_display->get_theme_color(SNAME("disabled_font_color"), SNAME("Editor")));
@@ -708,6 +786,10 @@ FindInFilesDialog2::FindInFilesDialog2() {
 	HBoxContainer *search_hbc = memnew(HBoxContainer);
 	main_vbc->add_child(search_hbc);
 
+	search_validation = memnew(TextureRect);
+	search_validation->set_v_size_flags(Control::SIZE_SHRINK_CENTER);
+	search_hbc->add_child(search_validation);
+
 	search_line_edit = memnew(LineEdit);
 	search_line_edit->set_clear_button_enabled(true);
 	search_line_edit->set_h_size_flags(Control::SIZE_EXPAND_FILL);
@@ -724,7 +806,7 @@ FindInFilesDialog2::FindInFilesDialog2() {
 	match_word_btn = memnew(Button);
 	match_word_btn->set_flat(true);
 	match_word_btn->set_toggle_mode(true);
-	match_word_btn->set_tooltip_text(TTR("Match whole words"));
+	match_word_btn->set_tooltip_text(TTR("Match whole words (incompatible with Regex)"));
 	match_word_btn->connect("toggled", callable_mp(this, &FindInFilesDialog2::_run_search).unbind(1));
 	search_hbc->add_child(match_word_btn);
 
@@ -732,7 +814,7 @@ FindInFilesDialog2::FindInFilesDialog2() {
 	match_regex_btn->set_flat(true);
 	match_regex_btn->set_toggle_mode(true);
 	match_regex_btn->set_tooltip_text(TTR("Use regular expressions (regex)"));
-	match_regex_btn->connect("toggled", callable_mp(this, &FindInFilesDialog2::_run_search).unbind(1));
+	match_regex_btn->connect("toggled", callable_mp(this, &FindInFilesDialog2::_on_match_regex_toggled));
 	search_hbc->add_child(match_regex_btn);
 
 	// Directory, File Filter
@@ -785,7 +867,7 @@ FindInFilesDialog2::FindInFilesDialog2() {
 	main_vbc->add_child(status_hbc);
 
 	status_display = memnew(Label);
-	status_display->set_text("No search made.");
+	status_display->set_text(TTR("Type a search query to find in files."));
 	status_hbc->add_child(status_display);
 
 	// The results list & editor
