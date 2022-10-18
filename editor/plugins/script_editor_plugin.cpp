@@ -55,7 +55,7 @@
 #include "editor/gui/editor_run_bar.h"
 #include "editor/gui/editor_toaster.h"
 #include "editor/inspector_dock.h"
-#include "editor/find_in_files_2.h"
+#include "editor/find_in_files_dialog.h"
 #include "editor/node_dock.h"
 #include "editor/plugins/shader_editor_plugin.h"
 #include "editor/plugins/text_shader_editor.h"
