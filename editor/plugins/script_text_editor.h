@@ -231,7 +231,7 @@ public:
 
 	virtual void goto_line(int p_line, bool p_with_error = false) override;
 	void goto_line_selection(int p_line, int p_begin, int p_end);
-	void goto_line_centered(int p_line);
+	virtual void goto_line_centered(int p_line) override;
 	virtual void set_executing_line(int p_line) override;
 	virtual void clear_executing_line() override;
 

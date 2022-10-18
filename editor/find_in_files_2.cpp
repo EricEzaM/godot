@@ -206,7 +206,7 @@ int FindInFilesSearcher::_thread_get_matches_from_file(const String &p_path, Vec
 
 		Ref<RegExMatch> match = matches[i];
 		int match_start_idx = match->get_start(0);
-		int match_end_idx = match->get_end(match->get_group_count());
+		int match_end_idx = match->get_end(0);
 
 		int start_line = file_text.count("\n", 0, match_start_idx);
 		int start_line_start_idx = file_text.rfindn("\n", match_start_idx) + 1;
@@ -338,11 +338,17 @@ void FindInFilesSearcher::stop() {
 	status = FindInFilesStatus();
 }
 
-bool FindInFilesSearcher::is_valid() const {
+bool FindInFilesSearcher::is_valid(String &r_message) const {
 	_THREAD_SAFE_METHOD_
 	Ref<RegEx> regex = _get_regex(text, match_use_regex, match_case_sensitive, match_whole_words);
 
 	if (regex.is_null() || !regex->is_valid()) {
+		r_message = TTR("Regular expression is invalid");
+		return false;
+	}
+
+	if (regex->search("").is_valid()) {
+		r_message = TTR("Regular expression matches an empty string");
 		return false;
 	}
 
@@ -507,7 +513,7 @@ void FindInFilesDialog2::_on_result_selected() {
 		if (editor) {
 			editor->set_edited_resource(file);
 			editor->enable_editor();
-			editor->goto_line(r.start_line);
+			editor->goto_line_centered(r.start_line);
 		}
 	}
 }
@@ -547,11 +553,12 @@ void FindInFilesDialog2::_run_search() {
 	searcher->set_search_text(search_string);
 
 	// Test if the search is valid and exit early if not.
-	if (searcher->is_valid()) {
+	String message;
+	if (searcher->is_valid(message)) {
 		search_validation->set_texture(Ref<Texture2D>());
 	} else {
 		search_validation->set_texture(get_theme_icon("StatusError", "EditorIcons"));
-		search_validation->set_tooltip_text(TTR("Search is not valid, please check the regular expression."));
+		search_validation->set_tooltip_text(message);
 		return;
 	}
 
@@ -750,6 +757,9 @@ void FindInFilesDialog2::_notification(int p_what) {
 			if (is_visible()) {
 				search_line_edit->grab_focus();
 				search_line_edit->select_all();
+				if (!search_line_edit->get_text().is_empty()) {
+					_run_search();
+				}
 			} else {
 				_save_recent_filters(false);
 			}
@@ -834,6 +844,7 @@ FindInFilesDialog2::FindInFilesDialog2() {
 	folder_dialog = memnew(FileDialog);
 	folder_dialog->set_file_mode(FileDialog::FILE_MODE_OPEN_DIR);
 	folder_dialog->connect("dir_selected", callable_mp(this, &FindInFilesDialog2::_on_folder_selected));
+	folder_dialog->set_title(TTR("Select a folder"));
 	add_child(folder_dialog);
 
 	Button *folder_btn = memnew(Button);

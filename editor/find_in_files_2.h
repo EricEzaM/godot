@@ -147,7 +147,7 @@ public:
 	void start();
 	void stop();
 
-	bool is_valid() const;
+	bool is_valid(String &r_message) const;
 
 	void set_search_text(const String &p_text);
 	String get_search_text() const;

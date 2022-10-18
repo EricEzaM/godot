@@ -130,6 +130,7 @@ public:
 	virtual void clear_breakpoints() override{};
 	virtual void goto_line(int p_line, bool p_with_error = false) override;
 	void goto_line_selection(int p_line, int p_begin, int p_end);
+	virtual void goto_line_centered(int p_line) override;
 	virtual void set_executing_line(int p_line) override;
 	virtual void clear_executing_line() override;
 	virtual void trim_trailing_whitespace() override;
