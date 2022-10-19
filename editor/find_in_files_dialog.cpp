@@ -470,6 +470,7 @@ FindInFilesDialog2::FindInFilesDialog2() {
 	match_case_btn->set_flat(true);
 	match_case_btn->set_toggle_mode(true);
 	match_case_btn->set_tooltip_text(TTR("Match case"));
+	match_case_btn->set_focus_mode(Control::FOCUS_CLICK);
 	match_case_btn->connect("toggled", callable_mp(this, &FindInFilesDialog2::_run_search).unbind(1));
 	search_hbc->add_child(match_case_btn);
 
@@ -477,6 +478,7 @@ FindInFilesDialog2::FindInFilesDialog2() {
 	match_word_btn->set_flat(true);
 	match_word_btn->set_toggle_mode(true);
 	match_word_btn->set_tooltip_text(TTR("Match whole words (incompatible with Regex)"));
+	match_word_btn->set_focus_mode(Control::FOCUS_CLICK);
 	match_word_btn->connect("toggled", callable_mp(this, &FindInFilesDialog2::_run_search).unbind(1));
 	search_hbc->add_child(match_word_btn);
 
@@ -484,6 +486,7 @@ FindInFilesDialog2::FindInFilesDialog2() {
 	match_regex_btn->set_flat(true);
 	match_regex_btn->set_toggle_mode(true);
 	match_regex_btn->set_tooltip_text(TTR("Use regular expressions (regex)"));
+	match_regex_btn->set_focus_mode(Control::FOCUS_CLICK);
 	match_regex_btn->connect("toggled", callable_mp(this, &FindInFilesDialog2::_on_match_regex_toggled));
 	search_hbc->add_child(match_regex_btn);
 
