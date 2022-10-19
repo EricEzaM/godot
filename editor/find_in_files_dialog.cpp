@@ -33,12 +33,9 @@
 #include "editor_node.h"
 #include "editor_paths.h"
 #include "editor_scale.h"
+#include "editor_settings.h"
 #include "find_in_files_searcher.h"
 #include "scene/gui/file_dialog.h"
-
-void FindInFilesDialog2::_bind_methods() {
-	ClassDB::bind_method("_draw_result_text", &FindInFilesDialog2::_draw_result_text);
-}
 
 void FindInFilesDialog2::_on_folder_selected(const String &p_path) {
 	if (folder_line_edit->get_text() != p_path) {
@@ -139,6 +136,25 @@ void FindInFilesDialog2::_on_result_activated() {
 	hide();
 }
 
+void FindInFilesDialog2::_on_mode_changed() {
+	if (mode == FIND_MODE) {
+		set_title(TTR("Find in Files"));
+		if (replace_dialog_btn) {
+			remove_button(replace_dialog_btn);
+		}
+		if (replace_all_dialog_btn) {
+			remove_button(replace_all_dialog_btn);
+		}
+		replace_hbc->hide();
+	}
+	if (mode == REPLACE_MODE) {
+		set_title(TTR("Replace in Files"));
+		replace_dialog_btn = add_button(TTR("Replace"), true, "replace");
+		replace_all_dialog_btn = add_button(TTR("Replace All"), "replace_all");
+		replace_hbc->show();
+	}
+}
+
 void FindInFilesDialog2::_run_search() {
 	// Cancel current search.
 	update_poll_timer->stop();
@@ -161,9 +177,9 @@ void FindInFilesDialog2::_run_search() {
 	// Test if the search is valid and exit early if not.
 	String message;
 	if (searcher->is_valid(message)) {
-		search_validation->set_texture(Ref<Texture2D>());
+		search_validation->hide();
 	} else {
-		search_validation->set_texture(get_theme_icon("StatusError", "EditorIcons"));
+		search_validation->show();
 		search_validation->set_tooltip_text(message);
 		return;
 	}
@@ -378,11 +394,48 @@ void FindInFilesDialog2::_notification(int p_what) {
 
 			status_display->add_theme_font_override("font", get_theme_font(SNAME("bold"), SNAME("EditorFonts")));
 			current_file_folder_display->add_theme_color_override("font_color", current_file_folder_display->get_theme_color(SNAME("disabled_font_color"), SNAME("Editor")));
+
+			search_validation->set_texture(get_theme_icon("StatusError", "EditorIcons"));
 		} break;
 	}
 }
 
+void FindInFilesDialog2::_bind_methods() {
+	ClassDB::bind_method("_draw_result_text", &FindInFilesDialog2::_draw_result_text);
+}
+
+void FindInFilesDialog2::shortcut_input(const Ref<InputEvent> &p_event) {
+	if (ED_IS_SHORTCUT("script_text_editor/find_in_files", p_event)) {
+		set_find_in_files_mode(FIND_MODE);
+		set_input_as_handled();
+		return;
+	}
+	if (ED_IS_SHORTCUT("script_text_editor/replace_in_files", p_event)) {
+		set_find_in_files_mode(REPLACE_MODE);
+		set_input_as_handled();
+		return;
+	}
+
+	AcceptDialog::shortcut_input(p_event);
+}
+
+FindInFilesDialog2::FindInFilesMode FindInFilesDialog2::get_dialog_mode() const {
+	return mode;
+}
+
+void FindInFilesDialog2::set_find_in_files_mode(FindInFilesMode p_mode) {
+	if (mode == p_mode) {
+		return;
+	}
+
+	mode = p_mode;
+	_on_mode_changed();
+}
+
 FindInFilesDialog2::FindInFilesDialog2() {
+	set_ok_button_text("Open in Panel");
+	set_process_shortcut_input(true);
+
 	set_min_size(Size2(720 * EDSCALE, 600 * EDSCALE));
 	set_title(TTR("Find in Files"));
 
@@ -404,6 +457,7 @@ FindInFilesDialog2::FindInFilesDialog2() {
 
 	search_validation = memnew(TextureRect);
 	search_validation->set_v_size_flags(Control::SIZE_SHRINK_CENTER);
+	search_validation->hide();
 	search_hbc->add_child(search_validation);
 
 	search_line_edit = memnew(LineEdit);
@@ -432,6 +486,16 @@ FindInFilesDialog2::FindInFilesDialog2() {
 	match_regex_btn->set_tooltip_text(TTR("Use regular expressions (regex)"));
 	match_regex_btn->connect("toggled", callable_mp(this, &FindInFilesDialog2::_on_match_regex_toggled));
 	search_hbc->add_child(match_regex_btn);
+
+	// Replace
+	replace_hbc = memnew(HBoxContainer);
+	main_vbc->add_child(replace_hbc);
+
+	replace_line_edit = memnew(LineEdit);
+	replace_line_edit->set_clear_button_enabled(true);
+	replace_line_edit->set_h_size_flags(Control::SIZE_EXPAND_FILL);
+	replace_line_edit->connect("text_changed", callable_mp(this, &FindInFilesDialog2::_run_search).unbind(1));
+	replace_hbc->add_child(replace_line_edit);
 
 	// Directory, File Filter
 	HBoxContainer *files_filter_hbc = memnew(HBoxContainer);

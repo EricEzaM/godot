@@ -57,6 +57,9 @@ class FindInFilesDialog2 : public AcceptDialog {
 	Button *match_word_btn;
 	Button *match_regex_btn;
 
+	HBoxContainer *replace_hbc;
+	LineEdit *replace_line_edit;
+
 	LineEdit *folder_line_edit;
 	String previous_folder_selection = "res://";
 	FileDialog *folder_dialog;
@@ -76,6 +79,9 @@ class FindInFilesDialog2 : public AcceptDialog {
 	Timer *update_poll_timer;
 	FindInFilesSearcher *searcher;
 
+	Button *replace_dialog_btn = nullptr;
+	Button *replace_all_dialog_btn = nullptr;
+
 	void _run_search();
 
 	void _update_search_status();
@@ -86,10 +92,12 @@ class FindInFilesDialog2 : public AcceptDialog {
 	void _on_recent_file_filter_selected(int p_idx);
 	void _on_match_regex_toggled(bool p_toggled);
 
-	void _set_editor(ScriptEditorBase *p_editor);
-
 	void _on_result_selected();
 	void _on_result_activated();
+
+	void _on_mode_changed();
+
+	void _set_editor(ScriptEditorBase *p_editor);
 
 	void _draw_result_text(Object *item_obj, Rect2 rect);
 
@@ -103,9 +111,15 @@ protected:
 
 public:
 	enum FindInFilesMode {
-		SEARCH_MODE,
+		FIND_MODE,
 		REPLACE_MODE
-	};
+	} mode;
+
+	virtual void shortcut_input(const Ref<InputEvent> &p_event) override;
+
+	// Not a great name but using `get_mode()` hides the method of the same name on Window
+	FindInFilesMode get_dialog_mode() const;
+	void set_find_in_files_mode(FindInFilesMode p_mode);
 
 	FindInFilesDialog2();
 };

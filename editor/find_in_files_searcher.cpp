@@ -336,11 +336,11 @@ bool FindInFilesSearcher::is_valid(String &r_message) const {
 	Ref<RegEx> regex = _get_regex(text, match_use_regex, match_case_sensitive, match_whole_words);
 
 	if (regex.is_null() || !regex->is_valid()) {
-		r_message = TTR("Regular expression is invalid");
+		r_message = TTR("Search is invalid");
 		return false;
 	}
 
-	if (regex->search("").is_valid()) {
+	if (match_use_regex && regex->search("").is_valid()) {
 		r_message = TTR("Regular expression matches an empty string");
 		return false;
 	}
