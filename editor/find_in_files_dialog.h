@@ -68,6 +68,7 @@ class FindInFilesDialog2 : public AcceptDialog {
 	MenuButton *recent_file_filters_btn;
 
 	Label *status_display;
+	Label *replace_preview;
 	Label *current_file_display;
 	Label *current_file_folder_display;
 
@@ -105,9 +106,15 @@ class FindInFilesDialog2 : public AcceptDialog {
 	void _load_recent_filters();
 	void _update_recent_filters_menu();
 
+	void _do_replace_on_selected();
+	void _do_replace_all();
+	void _update_replace_preview();
+
 protected:
 	void _notification(int p_what);
 	static void _bind_methods();
+
+	void custom_action(const String &) override;
 
 public:
 	enum FindInFilesMode {

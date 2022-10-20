@@ -53,15 +53,29 @@ public:
 		int end_line = 0;
 		int end_col = 0;
 
+		int start_in_file = 0;
+		int end_in_file = 0;
+
 		FindResult() = default;
 
-		FindResult(const String &p_path, const String &p_line_string, int p_start_line, int p_start_col, int p_end_line, int p_end_col) :
+		FindResult(const String &p_path, const String &p_line_string, int p_start_line, int p_start_col, int p_end_line, int p_end_col, int p_start_in_file, int p_end_in_file) :
 				path(p_path),
 				line_begin_string(p_line_string),
 				start_line(p_start_line),
 				start_col(p_start_col),
 				end_line(p_end_line),
-				end_col(p_end_col) {
+				end_col(p_end_col),
+				start_in_file(p_start_in_file),
+				end_in_file(p_end_in_file) {
+		}
+
+		bool operator==(const FindResult &p_other) const {
+			return path == p_other.path &&
+					line_begin_string == p_other.line_begin_string &&
+					start_line == p_other.start_line &&
+					start_col == p_other.start_col &&
+					end_line == p_other.end_line &&
+					end_col == p_other.end_col;
 		}
 	};
 
@@ -138,6 +152,9 @@ protected:
 
 public:
 	FindInFilesStatus get_status() const;
+
+	String get_replace_match_preview(const FindResult &p_result, const String &p_replacement);
+	bool replace_match(const FindResult &p_result, const String &p_replacement) const;
 
 	void start();
 	void stop();

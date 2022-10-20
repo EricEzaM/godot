@@ -109,6 +109,7 @@ void FindInFilesDialog2::_on_result_selected() {
 	FindInFilesSearcher::FindResult r = result_items[id];
 	current_file_display->set_text(r.path.get_file());
 	current_file_folder_display->set_text(r.path.replace(r.path.get_file(), ""));
+	_update_replace_preview();
 
 	Ref<Resource> file = ScriptEditor::get_singleton()->open_file(r.path, false);
 	if (file.is_valid()) {
@@ -146,12 +147,14 @@ void FindInFilesDialog2::_on_mode_changed() {
 			remove_button(replace_all_dialog_btn);
 		}
 		replace_hbc->hide();
+		replace_preview->hide();
 	}
 	if (mode == REPLACE_MODE) {
 		set_title(TTR("Replace in Files"));
 		replace_dialog_btn = add_button(TTR("Replace"), true, "replace");
 		replace_all_dialog_btn = add_button(TTR("Replace All"), "replace_all");
 		replace_hbc->show();
+		replace_preview->show();
 	}
 }
 
@@ -361,10 +364,40 @@ void FindInFilesDialog2::_update_recent_filters_menu() {
 		return;
 	}
 
-	// Add in reverse as newest = last, want newest on top.
+	// Add in reverse as last item in the list is the newest, want newest on top.
 	for (int i = recent_filters.size() - 1; i >= 0; --i) {
 		popup->add_item(recent_filters[i]);
 	}
+}
+
+void FindInFilesDialog2::_do_replace_on_selected() {
+	const TreeItem *selected = results->get_selected();
+	ERR_FAIL_COND_MSG(!selected, "Can't perform replace - nothing selected.");
+
+	String id = selected->get_meta("id");
+	ERR_FAIL_COND_MSG(id.is_empty(), "Can't perform replace - selected does not have ID metadata");
+
+	FindInFilesSearcher::FindResult result = result_items[id];
+	if (searcher->replace_match(result, replace_line_edit->get_text())) {
+		_on_result_selected();
+	}
+}
+
+void FindInFilesDialog2::_do_replace_all() {
+	// TBD
+}
+
+void FindInFilesDialog2::_update_replace_preview() {
+	const TreeItem *selected = results->get_selected();
+	ERR_FAIL_COND_MSG(!selected, "Can't perform replace - nothing selected.");
+
+	String id = selected->get_meta("id");
+	ERR_FAIL_COND_MSG(id.is_empty(), "Can't perform replace - selected does not have ID metadata");
+
+	FindInFilesSearcher::FindResult result = result_items[id];
+	const String preview = searcher->get_replace_match_preview(result, replace_line_edit->get_text());
+
+	replace_preview->set_text(preview);
 }
 
 void FindInFilesDialog2::_notification(int p_what) {
@@ -402,6 +435,17 @@ void FindInFilesDialog2::_notification(int p_what) {
 
 void FindInFilesDialog2::_bind_methods() {
 	ClassDB::bind_method("_draw_result_text", &FindInFilesDialog2::_draw_result_text);
+}
+
+void FindInFilesDialog2::custom_action(const String &p_string) {
+	if (p_string == "replace") {
+		_do_replace_on_selected();
+	} else if (p_string == "replace_all") {
+		// Replace all (including matches outside of search?)
+		_do_replace_all();
+	} else {
+		ERR_FAIL_MSG(vformat("Bug: Custom Action '%s' is not handled!", p_string));
+	}
 }
 
 void FindInFilesDialog2::shortcut_input(const Ref<InputEvent> &p_event) {
@@ -497,7 +541,7 @@ FindInFilesDialog2::FindInFilesDialog2() {
 	replace_line_edit = memnew(LineEdit);
 	replace_line_edit->set_clear_button_enabled(true);
 	replace_line_edit->set_h_size_flags(Control::SIZE_EXPAND_FILL);
-	replace_line_edit->connect("text_changed", callable_mp(this, &FindInFilesDialog2::_run_search).unbind(1));
+	replace_line_edit->connect("text_changed", callable_mp(this, &FindInFilesDialog2::_update_replace_preview).unbind(1));
 	replace_hbc->add_child(replace_line_edit);
 
 	// Directory, File Filter
@@ -553,6 +597,13 @@ FindInFilesDialog2::FindInFilesDialog2() {
 	status_display = memnew(Label);
 	status_display->set_text(TTR("Type a search query to find in files."));
 	status_hbc->add_child(status_display);
+
+	Label *replace_preview_label = memnew(Label);
+	replace_preview_label->set_text(TTR("After replacement:"));
+	status_hbc->add_child(replace_preview_label);
+
+	replace_preview = memnew(Label);
+	status_hbc->add_child(replace_preview);
 
 	// The results list & editor
 	split = memnew(VSplitContainer);

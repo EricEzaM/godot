@@ -202,14 +202,16 @@ int FindInFilesSearcher::_thread_get_matches_from_file(const String &p_path, Vec
 		int match_end_idx = match->get_end(0);
 
 		int start_line = file_text.count("\n", 0, match_start_idx);
+		// Add one to get the index of the first char of the next line (as \n appears at the end of the line, and using it's index would give the line it is on)
 		int start_line_start_idx = file_text.rfindn("\n", match_start_idx) + 1;
 		int start_col = match_start_idx - start_line_start_idx;
 
 		int end_line = file_text.count("\n", match_start_idx, match_end_idx) + start_line;
-		int end_line_start_idx = file_text.rfindn("\n", match_end_idx) + 1;
+		// If the match ends at the end of the line, ensure that the *previous* \n is found, not the one at the end of the line. This is why 1 is subtracted. Add one for same reason as above.
+		int end_line_start_idx = file_text.rfindn("\n", match_end_idx - 1) + 1;
 		int end_col = match_end_idx - end_line_start_idx;
 
-		p_results.push_back(FindResult(p_path, lines[start_line], start_line, start_col, end_line, end_col));
+		p_results.push_back(FindResult(p_path, lines[start_line], start_line, start_col, end_line, end_col, match_start_idx, match_end_idx));
 	}
 
 	return matches.size();
@@ -308,6 +310,77 @@ void FindInFilesSearcher::_bind_methods() {
 FindInFilesSearcher::FindInFilesStatus FindInFilesSearcher::get_status() const {
 	_THREAD_SAFE_METHOD_
 	return status;
+}
+
+String FindInFilesSearcher::get_replace_match_preview(const FindResult &p_result, const String &p_replacement) {
+	_THREAD_SAFE_METHOD_
+
+	const SearchInputData input = _create_input_data();
+	Ref<RegEx> regex = _get_regex(input.text, input.match_use_regex, input.match_case_sensitive, input.match_whole_words);
+	ERR_FAIL_COND_V_MSG(regex.is_null() || !regex->is_valid(), String(), "Regular expression for search is invalid");
+
+	Vector<FindResult> file_results;
+	_thread_get_matches_from_file(p_result.path, file_results, regex);
+
+	bool result_still_valid = false;
+	for (const FindResult &file_result : file_results) {
+		if (file_result == p_result) {
+			result_still_valid = true;
+			break;
+		}
+	}
+
+	if (!result_still_valid) {
+		print_verbose(vformat("Occurrence no longer matches, replace will be ignored in %s: line %s, col %s", p_result.path, p_result.start_line, p_result.start_col));
+		return String();
+	}
+
+	// Result is still valid, let's do preview.
+	Ref<FileAccess> f = FileAccess::open(p_result.path, FileAccess::READ);
+	ERR_FAIL_COND_V_MSG(f.is_null(), String(), vformat("Cannot open file from path '%s'.", p_result.path));
+
+	const String text = f->get_as_text(true);
+	const String to_replace = text.substr(p_result.start_in_file, p_result.end_in_file - p_result.start_in_file);
+	const String new_text = regex->sub(to_replace, p_replacement, false);
+
+	return new_text;
+}
+
+bool FindInFilesSearcher::replace_match(const FindResult &p_result, const String &p_replacement) const {
+	_THREAD_SAFE_METHOD_
+
+	const SearchInputData input = _create_input_data();
+	Ref<RegEx> regex = _get_regex(input.text, input.match_use_regex, input.match_case_sensitive, input.match_whole_words);
+	ERR_FAIL_COND_V_MSG(regex.is_null() || !regex->is_valid(), false, "Regular expression for search is invalid");
+
+	Vector<FindResult> file_results;
+	_thread_get_matches_from_file(p_result.path, file_results, regex);
+
+	bool result_still_valid = false;
+	for (const FindResult &file_result : file_results) {
+		if (file_result == p_result) {
+			result_still_valid = true;
+			break;
+		}
+	}
+
+	if (!result_still_valid) {
+		print_verbose(vformat("Occurrence no longer matches, replace will be ignored in %s: line %s, col %s", p_result.path, p_result.start_line, p_result.start_col));
+		return false;
+	}
+
+	// Result is still valid, let's replace.
+	Ref<FileAccess> f = FileAccess::open(p_result.path, FileAccess::READ_WRITE);
+	ERR_FAIL_COND_V_MSG(f.is_null(), false, vformat("Cannot open file from path '%s'.", p_result.path));
+
+	const String text = f->get_as_text(true);
+	const String new_text = regex->sub(text, p_replacement, false, p_result.start_in_file, p_result.end_in_file);
+
+	// Technically not always a failure, but this is necessary in case the sub fails
+	ERR_FAIL_COND_V_MSG(new_text.is_empty(), false, vformat("Repalce failed on path '%s' because resulting file would be empty (likely due to RegEx replacement error)", p_result.path));
+
+	f->store_string(new_text);
+	return true;
 }
 
 void FindInFilesSearcher::start() {
