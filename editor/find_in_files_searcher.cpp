@@ -201,13 +201,19 @@ int FindInFilesSearcher::_thread_get_matches_from_file(const String &p_path, Vec
 		int match_start_idx = match->get_start(0);
 		int match_end_idx = match->get_end(0);
 
-		int start_line = file_text.count("\n", 0, match_start_idx);
-		// Add one to get the index of the first char of the next line (as \n appears at the end of the line, and using it's index would give the line it is on)
-		int start_line_start_idx = file_text.rfindn("\n", match_start_idx) + 1;
+		int start_line = 0;
+		int start_line_start_idx = 0;
+
+		int prev_newline_idx = file_text.rfindn("\n", match_start_idx);
+		if (prev_newline_idx > 0) {
+			start_line = file_text.count("\n", 0, match_start_idx);
+			start_line_start_idx = prev_newline_idx + 1;
+		}
+
 		int start_col = match_start_idx - start_line_start_idx;
 
 		int end_line = file_text.count("\n", match_start_idx, match_end_idx) + start_line;
-		// If the match ends at the end of the line, ensure that the *previous* \n is found, not the one at the end of the line. This is why 1 is subtracted. Add one for same reason as above.
+		// If the match ends at the end of the line, ensure that the *previous* \n is found, not the one at the end of the line. This is why 1 is subtracted.
 		int end_line_start_idx = file_text.rfindn("\n", match_end_idx - 1) + 1;
 		int end_col = match_end_idx - end_line_start_idx;
 
