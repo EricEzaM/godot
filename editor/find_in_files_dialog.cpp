@@ -95,7 +95,7 @@ void FindInFilesDialog2::_set_editor(ScriptEditorBase *p_editor) {
 	}
 }
 
-void FindInFilesDialog2::_on_result_selected() {
+void FindInFilesDialog2::_update_display() {
 	TreeItem *selected = results->get_selected();
 	if (!selected) {
 		return;
@@ -379,7 +379,8 @@ void FindInFilesDialog2::_do_replace_on_selected() {
 
 	FindInFilesSearcher::FindResult result = result_items[id];
 	if (searcher->replace_match(result, replace_line_edit->get_text())) {
-		_on_result_selected();
+		_update_display();
+		ScriptEditor::get_singleton()->reload_scripts();
 	}
 }
 
@@ -476,6 +477,10 @@ void FindInFilesDialog2::set_find_in_files_mode(FindInFilesMode p_mode) {
 	_on_mode_changed();
 }
 
+void FindInFilesDialog2::set_find_text(const String &p_text) {
+	search_line_edit->set_text(p_text);
+}
+
 FindInFilesDialog2::FindInFilesDialog2() {
 	set_ok_button_text("Open in Panel");
 	set_process_shortcut_input(true);
@@ -543,6 +548,7 @@ FindInFilesDialog2::FindInFilesDialog2() {
 	replace_line_edit->set_h_size_flags(Control::SIZE_EXPAND_FILL);
 	replace_line_edit->connect("text_changed", callable_mp(this, &FindInFilesDialog2::_update_replace_preview).unbind(1));
 	replace_hbc->add_child(replace_line_edit);
+	replace_hbc->hide();
 
 	// Directory, File Filter
 	HBoxContainer *files_filter_hbc = memnew(HBoxContainer);
@@ -574,7 +580,7 @@ FindInFilesDialog2::FindInFilesDialog2() {
 	files_filter_hbc->add_child(file_filter_label);
 
 	file_filter_chkbx = memnew(CheckBox);
-	file_filter_chkbx->set_pressed(false);
+	file_filter_chkbx->set_pressed(true);
 	file_filter_chkbx->connect("toggled", callable_mp(this, &FindInFilesDialog2::_on_file_filter_toggled));
 	files_filter_hbc->add_child(file_filter_chkbx);
 
@@ -616,7 +622,7 @@ FindInFilesDialog2::FindInFilesDialog2() {
 	results->add_theme_font_override("font", EditorNode::get_singleton()->get_gui_base()->get_theme_font(SNAME("source"), SNAME("EditorFonts")));
 	results->add_theme_font_size_override("font_size", EditorNode::get_singleton()->get_gui_base()->get_theme_font_size(SNAME("source_size"), SNAME("EditorFonts")));
 	results->set_v_size_flags(Control::SIZE_EXPAND_FILL);
-	results->connect("item_selected", callable_mp(this, &FindInFilesDialog2::_on_result_selected));
+	results->connect("item_selected", callable_mp(this, &FindInFilesDialog2::_update_display));
 	results->connect("item_activated", callable_mp(this, &FindInFilesDialog2::_on_result_activated));
 	results->set_hide_root(true);
 	results->set_select_mode(Tree::SELECT_ROW);

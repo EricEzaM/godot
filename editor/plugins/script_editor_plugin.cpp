@@ -3677,6 +3677,7 @@ void ScriptEditor::_script_changed() {
 void ScriptEditor::_on_find_in_files_requested(String text) {
 	// find_in_files_dialog->set_find_in_files_mode(FindInFilesDialog::SEARCH_MODE);
 	// find_in_files_dialog->set_search_text(text);
+	find_in_files_dialog->set_find_text(text);
 	find_in_files_dialog->set_find_in_files_mode(FindInFilesDialog2::FIND_MODE);
 	find_in_files_dialog->popup_centered_ratio_xy(0.5, 0.65);
 }

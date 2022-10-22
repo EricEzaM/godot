@@ -376,15 +376,17 @@ bool FindInFilesSearcher::replace_match(const FindResult &p_result, const String
 	}
 
 	// Result is still valid, let's replace.
-	Ref<FileAccess> f = FileAccess::open(p_result.path, FileAccess::READ_WRITE);
-	ERR_FAIL_COND_V_MSG(f.is_null(), false, vformat("Cannot open file from path '%s'.", p_result.path));
-
+	Ref<FileAccess> f = FileAccess::open(p_result.path, FileAccess::READ);
+	ERR_FAIL_COND_V_MSG(f.is_null(), false, vformat("Cannot open file from path '%s' for reading.", p_result.path));
 	const String text = f->get_as_text(true);
-	const String new_text = regex->sub(text, p_replacement, false, p_result.start_in_file, p_result.end_in_file);
+	f = nullptr;
 
+	const String new_text = regex->sub(text, p_replacement, false, p_result.start_in_file, p_result.end_in_file);
 	// Technically not always a failure, but this is necessary in case the sub fails
 	ERR_FAIL_COND_V_MSG(new_text.is_empty(), false, vformat("Repalce failed on path '%s' because resulting file would be empty (likely due to RegEx replacement error)", p_result.path));
 
+	f = FileAccess::open(p_result.path, FileAccess::WRITE);
+	ERR_FAIL_COND_V_MSG(f.is_null(), false, vformat("Cannot open file from path '%s' for writing.", p_result.path));
 	f->store_string(new_text);
 	return true;
 }

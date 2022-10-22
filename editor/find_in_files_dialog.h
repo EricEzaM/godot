@@ -93,7 +93,7 @@ class FindInFilesDialog2 : public AcceptDialog {
 	void _on_recent_file_filter_selected(int p_idx);
 	void _on_match_regex_toggled(bool p_toggled);
 
-	void _on_result_selected();
+	void _update_display();
 	void _on_result_activated();
 
 	void _on_mode_changed();
@@ -127,6 +127,8 @@ public:
 	// Not a great name but using `get_mode()` hides the method of the same name on Window
 	FindInFilesMode get_dialog_mode() const;
 	void set_find_in_files_mode(FindInFilesMode p_mode);
+
+	void set_find_text(const String &p_text);
 
 	FindInFilesDialog2();
 };
