@@ -95,7 +95,7 @@ void FindInFilesDialog2::_set_editor(ScriptEditorBase *p_editor) {
 	}
 }
 
-void FindInFilesDialog2::_update_display() {
+void FindInFilesDialog2::_update_mini_editor() {
 	TreeItem *selected = results->get_selected();
 	if (!selected) {
 		return;
@@ -109,7 +109,6 @@ void FindInFilesDialog2::_update_display() {
 	FindInFilesSearcher::FindResult r = result_items[id];
 	current_file_display->set_text(r.path.get_file());
 	current_file_folder_display->set_text(r.path.replace(r.path.get_file(), ""));
-	_update_replace_preview();
 
 	Ref<Resource> file = ScriptEditor::get_singleton()->open_file(r.path, false);
 	if (file.is_valid()) {
@@ -119,6 +118,24 @@ void FindInFilesDialog2::_update_display() {
 			editor->enable_editor();
 			editor->goto_line_centered(r.start_line);
 		}
+	}
+}
+
+void FindInFilesDialog2::_update_selected_item() {
+	TreeItem *selected = results->get_selected();
+	if (!selected) {
+		return;
+	}
+
+	String id = selected->get_meta("id");
+	if (id.is_empty()) {
+		return;
+	}
+
+	FindInFilesSearcher::FindResult r = result_items[id];
+	if (!searcher->is_result_valid(r)) {
+		selected->set_text(0, "INVALID");
+		selected->set_custom_color(0, invalid_result_color);
 	}
 }
 
@@ -379,7 +396,8 @@ void FindInFilesDialog2::_do_replace_on_selected() {
 
 	FindInFilesSearcher::FindResult result = result_items[id];
 	if (searcher->replace_match(result, replace_line_edit->get_text())) {
-		_update_display();
+		_update_mini_editor();
+		_update_selected_item();
 		ScriptEditor::get_singleton()->reload_scripts();
 	}
 }
@@ -422,6 +440,7 @@ void FindInFilesDialog2::_notification(int p_what) {
 		} break;
 		case NOTIFICATION_READY:
 		case NOTIFICATION_THEME_CHANGED: {
+			invalid_result_color = get_theme_color(SNAME("error_color"), SNAME("Editor"));
 			match_case_btn->set_icon(get_theme_icon(SNAME("MatchCase"), SNAME("EditorIcons")));
 			match_word_btn->set_icon(get_theme_icon(SNAME("MatchWord"), SNAME("EditorIcons")));
 			match_regex_btn->set_icon(get_theme_icon(SNAME("MatchRegex"), SNAME("EditorIcons")));
@@ -622,7 +641,8 @@ FindInFilesDialog2::FindInFilesDialog2() {
 	results->add_theme_font_override("font", EditorNode::get_singleton()->get_gui_base()->get_theme_font(SNAME("source"), SNAME("EditorFonts")));
 	results->add_theme_font_size_override("font_size", EditorNode::get_singleton()->get_gui_base()->get_theme_font_size(SNAME("source_size"), SNAME("EditorFonts")));
 	results->set_v_size_flags(Control::SIZE_EXPAND_FILL);
-	results->connect("item_selected", callable_mp(this, &FindInFilesDialog2::_update_display));
+	results->connect("item_selected", callable_mp(this, &FindInFilesDialog2::_update_mini_editor));
+	results->connect("item_selected", callable_mp(this, &FindInFilesDialog2::_update_replace_preview));
 	results->connect("item_activated", callable_mp(this, &FindInFilesDialog2::_on_result_activated));
 	results->set_hide_root(true);
 	results->set_select_mode(Tree::SELECT_ROW);

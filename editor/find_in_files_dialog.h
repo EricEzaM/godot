@@ -76,6 +76,7 @@ class FindInFilesDialog2 : public AcceptDialog {
 	Tree *results;
 	PanelContainer *editor_container;
 	ScriptEditorBase *editor;
+	Color invalid_result_color = Color(1, 0, 0);
 
 	Timer *update_poll_timer;
 	FindInFilesSearcher *searcher;
@@ -93,7 +94,8 @@ class FindInFilesDialog2 : public AcceptDialog {
 	void _on_recent_file_filter_selected(int p_idx);
 	void _on_match_regex_toggled(bool p_toggled);
 
-	void _update_display();
+	void _update_mini_editor();
+	void _update_selected_item();
 	void _on_result_activated();
 
 	void _on_mode_changed();

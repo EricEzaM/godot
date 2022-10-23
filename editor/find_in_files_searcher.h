@@ -144,6 +144,8 @@ private:
 	// not ongoing ones (if the user of this class does not immediately restart the search).
 	SearchInputData _create_input_data() const;
 
+	bool _is_result_valid(const FindResult &p_result, const Ref<RegEx> &p_regex) const;
+
 	static String _regex_escape(const String &p_string, bool p_escape_asterisk = true);
 	static Ref<RegEx> _get_regex(const String &p_text, bool p_text_is_regex, bool p_case_sensitive, bool p_match_words);
 
@@ -153,8 +155,10 @@ protected:
 public:
 	FindInFilesStatus get_status() const;
 
-	String get_replace_match_preview(const FindResult &p_result, const String &p_replacement);
+	String get_replace_match_preview(const FindResult &p_result, const String &p_replacement) const;
 	bool replace_match(const FindResult &p_result, const String &p_replacement) const;
+
+	bool is_result_valid(const FindResult &p_result) const;
 
 	void start();
 	void stop();
