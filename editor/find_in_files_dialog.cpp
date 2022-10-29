@@ -449,12 +449,16 @@ void FindInFilesDialog2::_notification(int p_what) {
 			current_file_folder_display->add_theme_color_override("font_color", current_file_folder_display->get_theme_color(SNAME("disabled_font_color"), SNAME("Editor")));
 
 			search_validation->set_texture(get_theme_icon("StatusError", "EditorIcons"));
+
+			results->add_theme_font_override("font", EditorNode::get_singleton()->get_gui_base()->get_theme_font(SNAME("source"), SNAME("EditorFonts")));
+			results->add_theme_font_size_override("font_size", EditorNode::get_singleton()->get_gui_base()->get_theme_font_size(SNAME("source_size"), SNAME("EditorFonts")));
 		} break;
 	}
 }
 
 void FindInFilesDialog2::_bind_methods() {
 	ClassDB::bind_method("_draw_result_text", &FindInFilesDialog2::_draw_result_text);
+	ADD_SIGNAL(MethodInfo("open_in_dialog_requested"));
 }
 
 void FindInFilesDialog2::custom_action(const String &p_string) {
@@ -466,6 +470,10 @@ void FindInFilesDialog2::custom_action(const String &p_string) {
 	} else {
 		ERR_FAIL_MSG(vformat("Bug: Custom Action '%s' is not handled!", p_string));
 	}
+}
+
+void FindInFilesDialog2::ok_pressed() {
+	emit_signal("open_in_dialog_requested");
 }
 
 void FindInFilesDialog2::shortcut_input(const Ref<InputEvent> &p_event) {
@@ -631,15 +639,13 @@ FindInFilesDialog2::FindInFilesDialog2() {
 	status_hbc->add_child(replace_preview);
 
 	// The results list & editor
-	split = memnew(VSplitContainer);
+	VSplitContainer *split = memnew(VSplitContainer);
 	split->set_anchors_and_offsets_preset(Control::PRESET_FULL_RECT);
 	split->set_v_size_flags(Control::SIZE_EXPAND_FILL);
 	main_vbc->add_child(split);
 
 	results = memnew(Tree);
 	results->set_stretch_ratio(0.75);
-	results->add_theme_font_override("font", EditorNode::get_singleton()->get_gui_base()->get_theme_font(SNAME("source"), SNAME("EditorFonts")));
-	results->add_theme_font_size_override("font_size", EditorNode::get_singleton()->get_gui_base()->get_theme_font_size(SNAME("source_size"), SNAME("EditorFonts")));
 	results->set_v_size_flags(Control::SIZE_EXPAND_FILL);
 	results->connect("item_selected", callable_mp(this, &FindInFilesDialog2::_update_mini_editor));
 	results->connect("item_selected", callable_mp(this, &FindInFilesDialog2::_update_replace_preview));

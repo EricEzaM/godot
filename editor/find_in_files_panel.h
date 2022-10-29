@@ -31,4 +31,46 @@
 #ifndef FIND_IN_FILES_PANEL
 #define FIND_IN_FILES_PANEL
 
+#include "find_in_files_searcher.h"
+#include "scene/gui/control.h"
+#include "scene/gui/menu_button.h"
+
+class Button;
+class PanelContainer;
+class TabContainer;
+class Tree;
+
+class FindInFilesPanelTab : public Control {
+	GDCLASS(FindInFilesPanelTab, Control);
+
+	Tree *results;
+	PanelContainer *editor_container;
+
+public:
+	FindInFilesPanelTab();
+};
+
+class FindInFilesPanel2 : public Control {
+	GDCLASS(FindInFilesPanel2, Control);
+
+	TabContainer *tabs;
+
+	Button *refresh_btn;
+	MenuButton *grouping_btn;
+	Button *expand_all_btn;
+	Button *collapse_all_btn;
+	Button *show_source_btn;
+
+	FindInFilesSearcher *searcher;
+	Tree *results;
+
+	PanelContainer *editor_container;
+
+protected:
+	void _notification(int p_what);
+
+public:
+	FindInFilesPanel2();
+};
+
 #endif // FIND_IN_FILES_PANEL

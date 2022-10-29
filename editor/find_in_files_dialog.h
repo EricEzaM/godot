@@ -72,7 +72,6 @@ class FindInFilesDialog2 : public AcceptDialog {
 	Label *current_file_display;
 	Label *current_file_folder_display;
 
-	VSplitContainer *split;
 	Tree *results;
 	PanelContainer *editor_container;
 	ScriptEditorBase *editor;
@@ -117,6 +116,7 @@ protected:
 	static void _bind_methods();
 
 	void custom_action(const String &) override;
+	void ok_pressed() override;
 
 public:
 	enum FindInFilesMode {
