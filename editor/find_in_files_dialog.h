@@ -125,7 +125,7 @@ public:
 		REPLACE_MODE
 	} mode;
 
-	virtual void shortcut_input(const Ref<InputEvent> &p_event) override;
+	void shortcut_input(const Ref<InputEvent> &p_event) override;
 
 	// Not a great name but using `get_mode()` hides the method of the same name on Window
 	FindInFilesMode get_dialog_mode() const;

@@ -1729,12 +1729,12 @@ void ScriptEditor::_notification(int p_what) {
 
 		case CanvasItem::NOTIFICATION_VISIBILITY_CHANGED: {
 			if (is_visible()) {
-				find_in_files_button->show();
+				// find_in_files_button->show();
 			} else {
-				if (find_in_files->is_visible_in_tree()) {
-					EditorNode::get_singleton()->hide_bottom_panel();
-				}
-				find_in_files_button->hide();
+				// if (find_in_files->is_visible_in_tree()) {
+				// 	EditorNode::get_singleton()->hide_bottom_panel();
+				// }
+				// find_in_files_button->hide();
 			}
 
 		} break;
@@ -3815,7 +3815,7 @@ void ScriptEditor::_start_find_in_files(bool with_replace) {
 	// find_in_files->set_replace_text(find_in_files_dialog->get_replace_text());
 	// find_in_files->start_search();
 
-	EditorNode::get_singleton()->make_bottom_panel_item_visible(find_in_files);
+	// EditorNode::get_singleton()->make_bottom_panel_item_visible(find_in_files);
 }
 
 void ScriptEditor::_on_find_in_files_modified_files(PackedStringArray paths) {
@@ -4178,18 +4178,17 @@ ScriptEditor::ScriptEditor(WindowWrapper *p_wrapper) {
 	add_child(help_search_dialog);
 	help_search_dialog->connect("go_to_help", callable_mp(this, &ScriptEditor::_help_class_goto));
 
-	memnew(FindInFilesPanel2);
 	find_in_files_dialog = memnew(FindInFilesDialog2);
 	// find_in_files_dialog->connect(FindInFilesDialog::SIGNAL_FIND_REQUESTED, callable_mp(this, &ScriptEditor::_start_find_in_files).bind(false));
 	// find_in_files_dialog->connect(FindInFilesDialog::SIGNAL_REPLACE_REQUESTED, callable_mp(this, &ScriptEditor::_start_find_in_files).bind(true));
 	add_child(find_in_files_dialog);
-	find_in_files = memnew(FindInFilesPanel);
-	find_in_files_button = EditorNode::get_singleton()->add_bottom_panel_item(TTR("Search Results"), find_in_files);
-	find_in_files->set_custom_minimum_size(Size2(0, 200) * EDSCALE);
-	find_in_files->connect(FindInFilesPanel::SIGNAL_RESULT_SELECTED, callable_mp(this, &ScriptEditor::_on_find_in_files_result_selected));
-	find_in_files->connect(FindInFilesPanel::SIGNAL_FILES_MODIFIED, callable_mp(this, &ScriptEditor::_on_find_in_files_modified_files));
-	find_in_files->hide();
-	find_in_files_button->hide();
+	// find_in_files = memnew(FindInFilesPanel);
+	// find_in_files_button = EditorNode::get_singleton()->add_bottom_panel_item(TTR("Search Results"), find_in_files);
+	// find_in_files->set_custom_minimum_size(Size2(0, 200) * EDSCALE);
+	// find_in_files->connect(FindInFilesPanel::SIGNAL_RESULT_SELECTED, callable_mp(this, &ScriptEditor::_on_find_in_files_result_selected));
+	// find_in_files->connect(FindInFilesPanel::SIGNAL_FILES_MODIFIED, callable_mp(this, &ScriptEditor::_on_find_in_files_modified_files));
+	// find_in_files->hide();
+	// find_in_files_button->hide();
 
 	history_pos = -1;
 

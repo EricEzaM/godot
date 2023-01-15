@@ -93,7 +93,7 @@ void FindInFilesSearcher::_thread_process() {
 			break;
 		}
 
-		limit_reached = results.size() > get_result_limit();
+		limit_reached = input.result_limit > 0 && results.size() > input.result_limit;
 		if (limit_reached) {
 			break;
 		}

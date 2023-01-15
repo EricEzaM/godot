@@ -7698,6 +7698,9 @@ EditorNode::EditorNode() {
 	Button *output_button = add_bottom_panel_item(TTR("Output"), log);
 	log->set_tool_button(output_button);
 
+	FindInFilesPanel2 *search_panel = memnew(FindInFilesPanel2);
+	add_bottom_panel_item(TTR("Search Results"), search_panel);
+
 	center_split->connect("resized", callable_mp(this, &EditorNode::_vp_resized));
 
 	native_shader_source_visualizer = memnew(EditorNativeShaderSourceVisualizer);

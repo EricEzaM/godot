@@ -36,6 +36,8 @@
 #include "scene/gui/split_container.h"
 #include "scene/gui/tree.h"
 
+FindInFilesPanel2 *FindInFilesPanel2::singleton = nullptr;
+
 FindInFilesPanelTab::FindInFilesPanelTab() {
 	// The results list & editor
 	HSplitContainer *split = memnew(HSplitContainer);
@@ -68,7 +70,16 @@ void FindInFilesPanel2::_notification(int p_what) {
 	}
 }
 
+void FindInFilesPanel2::add_search(FindInFilesSearcher::SearchInputData p_input_data) {
+}
+
 FindInFilesPanel2::FindInFilesPanel2() {
+	singleton = this;
+
+	searcher = memnew(FindInFilesSearcher);
+	// TODO Soft Result Limit
+	// searcher->set_result_limit()
+
 	HBoxContainer *main_hbox = memnew(HBoxContainer);
 	main_hbox->set_anchors_and_offsets_preset(PRESET_FULL_RECT);
 	main_hbox->set_v_size_flags(SIZE_EXPAND_FILL);

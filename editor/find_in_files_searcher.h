@@ -87,7 +87,6 @@ public:
 		Vector<FindResult> results = Vector<FindResult>();
 	};
 
-private:
 	struct SearchInputData {
 		String text;
 		String directory;
@@ -113,6 +112,7 @@ private:
 		}
 	};
 
+private:
 	bool is_cancelled;
 
 	FindInFilesStatus status;

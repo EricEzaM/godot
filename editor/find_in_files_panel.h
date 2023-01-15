@@ -53,6 +53,8 @@ public:
 class FindInFilesPanel2 : public Control {
 	GDCLASS(FindInFilesPanel2, Control);
 
+	static FindInFilesPanel2 *singleton;
+
 	TabContainer *tabs;
 
 	Button *refresh_btn;
@@ -70,6 +72,10 @@ protected:
 	void _notification(int p_what);
 
 public:
+	static FindInFilesPanel2 *FindInFilesPanel2::get_singleton() { return singleton; }
+
+	void add_search(FindInFilesSearcher::SearchInputData p_input_data);
+
 	FindInFilesPanel2();
 };
 
