@@ -68,6 +68,7 @@ class FindInFilesDialog2 : public AcceptDialog {
 	MenuButton *recent_file_filters_btn;
 
 	Label *status_display;
+	Label *replace_preview_label;
 	Label *replace_preview;
 	Label *current_file_display;
 	Label *current_file_folder_display;

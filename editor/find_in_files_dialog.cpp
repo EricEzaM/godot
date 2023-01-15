@@ -36,6 +36,9 @@
 #include "editor_settings.h"
 #include "find_in_files_searcher.h"
 #include "scene/gui/file_dialog.h"
+#include "scene/gui/menu_button.h"
+#include "scene/gui/split_container.h"
+#include "scene/gui/texture_rect.h"
 
 void FindInFilesDialog2::_on_folder_selected(const String &p_path) {
 	if (folder_line_edit->get_text() != p_path) {
@@ -81,7 +84,7 @@ void FindInFilesDialog2::_set_editor(ScriptEditorBase *p_editor) {
 	if (editor_container->get_child_count(false) == 1) {
 		Node *node = editor_container->get_child(0, false);
 		editor_container->remove_child(node);
-		node->queue_delete();
+		node->queue_free();
 	}
 
 	editor = p_editor;
@@ -165,6 +168,7 @@ void FindInFilesDialog2::_on_mode_changed() {
 		}
 		replace_hbc->hide();
 		replace_preview->hide();
+		replace_preview_label->hide();
 	}
 	if (mode == REPLACE_MODE) {
 		set_title(TTR("Replace in Files"));
@@ -172,6 +176,7 @@ void FindInFilesDialog2::_on_mode_changed() {
 		replace_all_dialog_btn = add_button(TTR("Replace All"), "replace_all");
 		replace_hbc->show();
 		replace_preview->show();
+		replace_preview_label->show();
 	}
 }
 
@@ -631,7 +636,7 @@ FindInFilesDialog2::FindInFilesDialog2() {
 	status_display->set_text(TTR("Type a search query to find in files."));
 	status_hbc->add_child(status_display);
 
-	Label *replace_preview_label = memnew(Label);
+	replace_preview_label = memnew(Label);
 	replace_preview_label->set_text(TTR("After replacement:"));
 	status_hbc->add_child(replace_preview_label);
 
