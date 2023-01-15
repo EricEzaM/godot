@@ -232,7 +232,7 @@ void FindInFilesDialog2::_run_search() {
 
 void FindInFilesDialog2::_update_search_status() {
 	auto status = searcher->get_status();
-	status_display->set_text(vformat("%s+ matches in %s%s files", status.results.size(), status.files_with_matches, status.limit_reached ? "+" : ""));
+	status_display->set_text(vformat("%s%s matches in %s%s files", status.results.size(), status.limit_reached ? "+" : "", status.files_with_matches, status.limit_reached ? "+" : ""));
 
 	if (status.results.size() == 0) {
 		_update_mini_editor();
@@ -476,7 +476,7 @@ void FindInFilesDialog2::custom_action(const String &p_string) {
 }
 
 void FindInFilesDialog2::ok_pressed() {
-	// FindInFilesPanel2::get_singleton()->
+	FindInFilesPanel2::get_singleton()->add_search(searcher->create_input_data());
 	EditorNode::get_singleton()->make_bottom_panel_item_visible(FindInFilesPanel2::get_singleton());
 }
 
@@ -514,7 +514,7 @@ void FindInFilesDialog2::set_find_text(const String &p_text) {
 
 FindInFilesDialog2::FindInFilesDialog2() {
 	searcher = memnew(FindInFilesSearcher);
-	searcher->set_result_limit(100);
+	searcher->set_result_limit(100, false);
 
 	set_ok_button_text("Open in Panel");
 	set_process_shortcut_input(true);

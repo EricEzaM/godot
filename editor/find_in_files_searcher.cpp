@@ -42,7 +42,7 @@ void FindInFilesSearcher::_thread_func(void *self) {
 }
 
 void FindInFilesSearcher::_thread_process() {
-	SearchInputData input = _create_input_data();
+	SearchInputData input = create_input_data();
 	PackedStringArray filepaths;
 
 	Vector<Ref<RegEx>> allow_regexs;
@@ -93,16 +93,24 @@ void FindInFilesSearcher::_thread_process() {
 			break;
 		}
 
-		limit_reached = input.result_limit > 0 && results.size() > input.result_limit;
+		limit_reached = input.result_limit > 0 && results.size() > input.result_limit && ((input.soft_limit && !soft_limit_continue) || !input.soft_limit);
 		if (limit_reached) {
-			break;
+			if (input.soft_limit) {
+				_update_status(false, searched, searched_with_matches, limit_reached, input.soft_limit, results);
+				soft_limit_sem.wait();
+				if (!soft_limit_continue) {
+					break;
+				}
+			} else {
+				break;
+			}
 		}
 
-		_update_status(false, searched, searched_with_matches, limit_reached, results);
+		_update_status(false, searched, searched_with_matches, limit_reached, input.soft_limit, results);
 		OS::get_singleton()->delay_usec(15000);
 	}
 
-	_update_status(true, searched, searched_with_matches, limit_reached, results);
+	_update_status(true, searched, searched_with_matches, limit_reached, input.soft_limit, results);
 }
 
 void FindInFilesSearcher::_thread_get_files_from_dir(const String &p_dir_path, const Vector<Ref<RegEx>> &p_allow_regex, const Vector<Ref<RegEx>> &p_ignore_regex, PackedStringArray &r_filepaths) {
@@ -223,12 +231,13 @@ int FindInFilesSearcher::_thread_get_matches_from_file(const String &p_path, Vec
 	return matches.size();
 }
 
-void FindInFilesSearcher::_update_status(bool p_finished, int p_files_searched, int p_files_with_matches, int p_limit_reached, const Vector<FindResult> &p_results) {
+void FindInFilesSearcher::_update_status(bool p_finished, int p_files_searched, int p_files_with_matches, int p_limit_reached, bool p_soft_limit, const Vector<FindResult> &p_results) {
 	_THREAD_SAFE_METHOD_
 	status.finished = p_finished;
 	status.files_searched = p_files_searched;
 	status.files_with_matches = p_files_with_matches;
 	status.limit_reached = p_limit_reached;
+	status.soft_limit = p_soft_limit;
 	status.results = p_results;
 }
 
@@ -242,7 +251,7 @@ void FindInFilesSearcher::_set_cancelled(bool p_cancelled) {
 	is_cancelled = p_cancelled;
 }
 
-FindInFilesSearcher::SearchInputData FindInFilesSearcher::_create_input_data() const {
+FindInFilesSearcher::SearchInputData FindInFilesSearcher::create_input_data() const {
 	_THREAD_SAFE_METHOD_
 	return SearchInputData(
 			text,
@@ -250,6 +259,7 @@ FindInFilesSearcher::SearchInputData FindInFilesSearcher::_create_input_data() c
 			allow_regex_strings,
 			ignore_regex_strings,
 			result_limit,
+			soft_result_limit,
 			match_case_sensitive,
 			match_whole_words,
 			match_use_regex);
@@ -392,6 +402,7 @@ bool FindInFilesSearcher::is_result_valid(const FindResult &p_result) const {
 
 void FindInFilesSearcher::start() {
 	_THREAD_SAFE_METHOD_
+	soft_limit_continue = false;
 	is_cancelled = false;
 	status = FindInFilesStatus();
 
@@ -470,14 +481,26 @@ void FindInFilesSearcher::set_file_filter(const String &p_file_filter) {
 	}
 }
 
-void FindInFilesSearcher::set_result_limit(int p_limit) {
+void FindInFilesSearcher::set_file_filter(const HashSet<String> &p_allow_regex_strings, const HashSet<String> &p_ignore_regex_strings) {
+	_THREAD_SAFE_METHOD_
+	allow_regex_strings = p_allow_regex_strings;
+	ignore_regex_strings = p_ignore_regex_strings;
+}
+
+void FindInFilesSearcher::set_result_limit(int p_limit, bool p_is_soft) {
 	_THREAD_SAFE_METHOD_
 	result_limit = p_limit;
+	soft_result_limit = p_is_soft;
 }
 
 int FindInFilesSearcher::get_result_limit() const {
 	_THREAD_SAFE_METHOD_
 	return result_limit;
+}
+
+int FindInFilesSearcher::is_soft_result_limit() const {
+	_THREAD_SAFE_METHOD_
+	return soft_result_limit;
 }
 
 void FindInFilesSearcher::set_case_sensitive(bool p_case_sensitive) {
@@ -498,6 +521,12 @@ void FindInFilesSearcher::set_whole_words(bool p_whole_words) {
 void FindInFilesSearcher::set_use_regex(bool p_use_regex) {
 	_THREAD_SAFE_METHOD_
 	match_use_regex = p_use_regex;
+}
+
+void FindInFilesSearcher::release_soft_limit(bool p_continue_search) {
+	_THREAD_SAFE_METHOD_
+	soft_limit_continue = p_continue_search;
+	soft_limit_sem.post();
 }
 
 FindInFilesSearcher::FindInFilesSearcher() {

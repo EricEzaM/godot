@@ -33,8 +33,10 @@
 
 #include "find_in_files_searcher.h"
 #include "scene/gui/control.h"
+#include "scene/gui/dialogs.h"
 #include "scene/gui/menu_button.h"
 
+class TreeItem;
 class Button;
 class PanelContainer;
 class TabContainer;
@@ -43,11 +45,31 @@ class Tree;
 class FindInFilesPanelTab : public Control {
 	GDCLASS(FindInFilesPanelTab, Control);
 
+	FindInFilesSearcher *searcher;
+	Timer *update_poll_timer;
+
+	// Maps directory/file to treeitem which represents directory/file.
+	HashMap<String, TreeItem *> result_filesystem_levels;
+	HashMap<String, FindInFilesSearcher::FindResult> result_items;
+
+	Label *status_display;
+
 	Tree *results;
 	PanelContainer *editor_container;
 
+	ConfirmationDialog *continue_confirm_dialog;
+
+	void _update_search_status();
+	void _update_searcher(FindInFilesSearcher::SearchInputData p_input_data);
+	void _soft_limit_continue_search();
+	void _soft_limit_cancel_search();
+
+protected:
+	void _notification(int p_what);
+	void _run_search();
+
 public:
-	FindInFilesPanelTab();
+	FindInFilesPanelTab(FindInFilesSearcher::SearchInputData p_input_data);
 };
 
 class FindInFilesPanel2 : public Control {
@@ -58,15 +80,13 @@ class FindInFilesPanel2 : public Control {
 	TabContainer *tabs;
 
 	Button *refresh_btn;
+	Button *configure_btn;
 	MenuButton *grouping_btn;
 	Button *expand_all_btn;
 	Button *collapse_all_btn;
 	Button *show_source_btn;
 
-	FindInFilesSearcher *searcher;
-	Tree *results;
-
-	PanelContainer *editor_container;
+	void _on_tab_button_pressed(int p_tab);
 
 protected:
 	void _notification(int p_what);
