@@ -28,14 +28,16 @@
 /* SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.                */
 /*************************************************************************/
 
-#ifndef FIND_IN_FILES_PANEL
-#define FIND_IN_FILES_PANEL
+#ifndef FIND_IN_FILES_PANEL_H
+#define FIND_IN_FILES_PANEL_H
 
-#include "find_in_files_searcher.h"
+#include "editor/find_in_files_searcher.h"
+
 #include "scene/gui/control.h"
 #include "scene/gui/dialogs.h"
 #include "scene/gui/menu_button.h"
 
+class FindInFilesEditor;
 class TreeItem;
 class Button;
 class PanelContainer;
@@ -44,6 +46,18 @@ class Tree;
 
 class FindInFilesPanelTab : public Control {
 	GDCLASS(FindInFilesPanelTab, Control);
+
+public:
+	enum GroupingModeFlags {
+		FILE = 1 << 1,
+		DIRECTORY = 1 << 2,
+	};
+
+private:
+	int grouping_mode = FILE | DIRECTORY;
+
+	Ref<Texture2D> folder_icon;
+	Ref<Texture2D> file_icon;
 
 	FindInFilesSearcher *searcher;
 	Timer *update_poll_timer;
@@ -55,20 +69,33 @@ class FindInFilesPanelTab : public Control {
 	Label *status_display;
 
 	Tree *results;
-	PanelContainer *editor_container;
+	FindInFilesEditor *editor_panel;
 
 	ConfirmationDialog *continue_confirm_dialog;
 
+	void _on_result_activated();
+
+	void _reset();
 	void _update_search_status();
 	void _update_searcher(FindInFilesSearcher::SearchInputData p_input_data);
+	void _update_editor();
+
 	void _soft_limit_continue_search();
 	void _soft_limit_cancel_search();
+	void _draw_result_text(Object *p_item_obj, Rect2 p_rect);
 
 protected:
+	static void _bind_methods();
+
 	void _notification(int p_what);
 	void _run_search();
 
 public:
+	void expand_collapse_tree(bool p_collapse);
+
+	void set_grouping_mode(int p_mode);
+	int get_grouping_mode() const;
+
 	FindInFilesPanelTab(FindInFilesSearcher::SearchInputData p_input_data);
 };
 
@@ -81,12 +108,15 @@ class FindInFilesPanel2 : public Control {
 
 	Button *refresh_btn;
 	Button *configure_btn;
-	MenuButton *grouping_btn;
+	Button *group_directory_btn;
+	Button *group_files_btn;
 	Button *expand_all_btn;
 	Button *collapse_all_btn;
 	Button *show_source_btn;
 
 	void _on_tab_button_pressed(int p_tab);
+	void _expand_collapse_tree(bool p_collapse);
+	void _toggle_grouping(bool p_toggled_on, FindInFilesPanelTab::GroupingModeFlags flag);
 
 protected:
 	void _notification(int p_what);
@@ -99,4 +129,6 @@ public:
 	FindInFilesPanel2();
 };
 
-#endif // FIND_IN_FILES_PANEL
+VARIANT_ENUM_CAST(FindInFilesPanelTab::GroupingModeFlags)
+
+#endif // FIND_IN_FILES_PANEL_H

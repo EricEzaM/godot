@@ -31,13 +31,13 @@
 #ifndef FIND_IN_FILES_DIALOG_H
 #define FIND_IN_FILES_DIALOG_H
 
-#include "code_editor.h"
-#include "find_in_files_searcher.h"
+#include "editor/find_in_files_searcher.h"
 #include "modules/regex/regex.h"
 #include "plugins/script_editor_plugin.h"
 #include "scene/gui/dialogs.h"
 #include "scene/gui/item_list.h"
 
+class FindInFilesEditor;
 class LineEdit;
 class CheckBox;
 class FileDialog;
@@ -70,12 +70,9 @@ class FindInFilesDialog2 : public AcceptDialog {
 	Label *status_display;
 	Label *replace_preview_label;
 	Label *replace_preview;
-	Label *current_file_display;
-	Label *current_file_folder_display;
 
 	Tree *results;
-	PanelContainer *editor_container;
-	ScriptEditorBase *editor;
+	FindInFilesEditor *editor_container;
 	Color invalid_result_color = Color(1, 0, 0);
 
 	Timer *update_poll_timer;
@@ -92,17 +89,15 @@ class FindInFilesDialog2 : public AcceptDialog {
 	void _on_folder_text_changed(const String &p_string);
 	void _on_file_filter_toggled(bool p_toggled_on);
 	void _on_recent_file_filter_selected(int p_idx);
-	void _on_match_regex_toggled(bool p_toggled);
+	void _on_match_regex_toggled(bool p_toggled_on);
 
-	void _update_mini_editor();
+	void _update_editor();
 	void _update_selected_item();
 	void _on_result_activated();
 
 	void _on_mode_changed();
 
-	void _set_editor(ScriptEditorBase *p_editor);
-
-	void _draw_result_text(Object *item_obj, Rect2 rect);
+	void _draw_result_text(Object *p_item_obj, Rect2 p_rect);
 
 	void _save_recent_filters(bool p_save_to_editor_cfg);
 	void _load_recent_filters();
