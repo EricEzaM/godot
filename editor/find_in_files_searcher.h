@@ -196,6 +196,7 @@ public:
 	void release_soft_limit(bool p_continue_search);
 
 	FindInFilesSearcher();
+	~FindInFilesSearcher();
 };
 
 #endif // FIND_IN_FILES_SEARCHER_H

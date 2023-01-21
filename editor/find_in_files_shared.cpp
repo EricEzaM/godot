@@ -102,6 +102,13 @@ FindInFilesEditor::FindInFilesEditor() {
 	add_child(editor_panel);
 }
 
+FindInFilesEditor::~FindInFilesEditor() {
+	clear_file();
+	current_file_display->queue_free();
+	current_file_folder_display->queue_free();
+	editor_panel->queue_free();
+}
+
 void draw_find_result_tree_item(Tree *p_tree, const TreeItem *p_item, Rect2 p_rect, FindInFilesSearcher::FindResult p_result, bool p_draw_line_only) {
 	Ref<Font> font = p_tree->get_theme_font(SNAME("font"));
 	int font_size = p_tree->get_theme_font_size(SNAME("font_size"));

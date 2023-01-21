@@ -97,6 +97,7 @@ public:
 	int get_grouping_mode() const;
 
 	FindInFilesPanelTab(FindInFilesSearcher::SearchInputData p_input_data);
+	~FindInFilesPanelTab();
 };
 
 class FindInFilesPanel2 : public Control {
@@ -114,6 +115,7 @@ class FindInFilesPanel2 : public Control {
 	Button *collapse_all_btn;
 	Button *show_source_btn;
 
+	void _on_tab_changed(int p_new_tab);
 	void _on_tab_button_pressed(int p_tab);
 	void _expand_collapse_tree(bool p_collapse);
 	void _toggle_grouping(bool p_toggled_on, FindInFilesPanelTab::GroupingModeFlags flag);

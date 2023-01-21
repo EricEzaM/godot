@@ -304,12 +304,45 @@ FindInFilesPanelTab::FindInFilesPanelTab(FindInFilesSearcher::SearchInputData p_
 	continue_confirm_dialog->set_text(TTR(vformat("%s+ results have been found. Do you wish to continue the search? This may take a long time.", result_limit)));
 }
 
+FindInFilesPanelTab::~FindInFilesPanelTab() {
+	editor_panel->queue_free();
+	continue_confirm_dialog->queue_free();
+	// status_display->queue_free();
+	results->queue_free();
+	update_poll_timer->queue_free();
+	memdelete(searcher);
+}
+
+void FindInFilesPanel2::_on_tab_changed(int p_new_tab) {
+	Control *current = tabs->get_tab_control(p_new_tab);
+	if (!current) {
+		return;
+	}
+	FindInFilesPanelTab *tab = cast_to<FindInFilesPanelTab>(current);
+	ERR_FAIL_NULL_MSG(tab, "Tab of find in files panel is of incorrect type");
+
+	const int mode = tab->get_grouping_mode();
+	group_files_btn->set_pressed((mode & FindInFilesPanelTab::GroupingModeFlags::FILE) == FindInFilesPanelTab::GroupingModeFlags::FILE);
+	group_directory_btn->set_pressed((mode & FindInFilesPanelTab::GroupingModeFlags::DIRECTORY) == FindInFilesPanelTab::GroupingModeFlags::DIRECTORY);
+}
+
 void FindInFilesPanel2::_on_tab_button_pressed(int p_tab) {
-	// TODO close tab
+	Control *current = tabs->get_tab_control(p_tab);
+	if (!current) {
+		return;
+	}
+	FindInFilesPanelTab *tab = cast_to<FindInFilesPanelTab>(current);
+	ERR_FAIL_NULL_MSG(tab, "Tab of find in files panel is of incorrect type");
+
+	tabs->remove_child(tab);
+	tab->queue_free();
 }
 
 void FindInFilesPanel2::_expand_collapse_tree(bool p_collapse) {
 	Control *current = tabs->get_current_tab_control();
+	if (!current) {
+		return;
+	}
 	FindInFilesPanelTab *tab = cast_to<FindInFilesPanelTab>(current);
 	ERR_FAIL_NULL_MSG(tab, "Tab of find in files panel is of incorrect type");
 
@@ -419,6 +452,7 @@ FindInFilesPanel2::FindInFilesPanel2() {
 	tabs->set_v_size_flags(SIZE_EXPAND_FILL);
 	tabs->set_h_size_flags(SIZE_EXPAND_FILL);
 	tabs->connect(SNAME("tab_button_pressed"), callable_mp(this, &FindInFilesPanel2::_on_tab_button_pressed));
+	tabs->connect(SNAME("tab_changed"), callable_mp(this, &FindInFilesPanel2::_on_tab_changed));
 
 	main_hbox->add_child(tabs);
 }

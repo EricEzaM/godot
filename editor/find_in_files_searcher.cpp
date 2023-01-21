@@ -531,3 +531,7 @@ void FindInFilesSearcher::release_soft_limit(bool p_continue_search) {
 
 FindInFilesSearcher::FindInFilesSearcher() {
 }
+
+FindInFilesSearcher::~FindInFilesSearcher() {
+	stop();
+}

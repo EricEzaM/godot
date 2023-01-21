@@ -64,6 +64,7 @@ public:
 	void open_file(String p_path, int p_line);
 
 	FindInFilesEditor();
+	~FindInFilesEditor();
 };
 
 void draw_find_result_tree_item(Tree *p_tree, const TreeItem *p_item, Rect2 p_rect, FindInFilesSearcher::FindResult p_result, bool p_draw_line_only);
