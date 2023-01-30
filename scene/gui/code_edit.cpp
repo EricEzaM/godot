@@ -2962,10 +2962,6 @@ void CodeEdit::_filter_code_completion_candidates_impl() {
 			continue;
 		}
 
-		// if (option.display.similarity(string_to_complete) < 0.1) {
-		// 	continue;
-		// }
-
 		String display_lower = option.display.to_lower();
 		const char32_t *ssq_lower = &string_to_complete_lower[0];
 		const char32_t *tgt_lower = &display_lower[0];
@@ -2976,9 +2972,10 @@ void CodeEdit::_filter_code_completion_candidates_impl() {
 			}
 		}
 		ssq_lower++;
+
 		while (*ssq_lower) {
-			Vector<Vector<Pair<int, int>>> S_next;
-			for (Vector<Pair<int, int>> s : ssq_lower_matches) {
+			Vector<Vector<Pair<int, int>>> s_next;
+			for (Vector<Pair<int, int>> &s : ssq_lower_matches) {
 				Pair<int, int> last_match = s[s.size() - 1];
 				int next_index = last_match.first + last_match.second;
 				// get the last index from current sequence
@@ -2988,38 +2985,39 @@ void CodeEdit::_filter_code_completion_candidates_impl() {
 					Pair<int, int> last_new_match = new_match[new_match.size() - 1];
 					last_new_match.second++;
 					new_match.set(new_match.size() - 1, last_new_match);
-					S_next.push_back(new_match);
+					s_next.push_back(new_match);
 				}
 				for (int i = next_index + 1; i < option.display.length(); i++) {
 					if (option.display[i] == *ssq_lower) {
 						Vector<Pair<int, int>> new_match = s;
 						new_match.push_back({ i, 1 });
-						S_next.push_back(new_match);
+						s_next.push_back(new_match);
 					}
 				}
 			}
-			ssq_lower_matches = S_next;
+			ssq_lower_matches = s_next;
 			ssq_lower++;
 		}
 
-		if (ssq_lower_matches.size() > 0) {
-			print_line(option.display, "\t -> \t", string_to_complete);
-			std::for_each(ssq_lower_matches.begin(), ssq_lower_matches.end(), [](Vector<Pair<int, int>> s) {
-				String to_print = "[";
-				std::for_each(s.begin(), s.end(), [&to_print](Pair<int, int> i) {
-					to_print = to_print + ",(" + stringify_variants(i.first) + "," + stringify_variants(i.second) + ")";
-				});
-				to_print = to_print + "]";
-				print_line(to_print);
-			});
-		}
+		// if (ssq_lower_matches.size() > 0) {
+		// 	print_line(option.display, "\t -> \t", string_to_complete);
+		// 	for (Vector<Pair<int, int>> &s : ssq_lower_matches) {
+		// 		String to_print = "[";
+		// 		for (Pair<int, int> &i : s) {
+		// 			to_print = to_print + ",(" + stringify_variants(i.first) + "," + stringify_variants(i.second) + ")";
+		// 		}
+		// 		to_print = to_print + "]";
+		// 		print_line(to_print);
+		// 	}
+		// }
+
 		if (ssq_lower_matches.size() > 0) {
 			option.matches = ssq_lower_matches[0];
 			ssq_lower_matches = ssq_lower_matches.slice(1);
 			if (ssq_lower_matches.size() > 0) {
 				CodeCompletionOptionCompare compare;
 				ScriptLanguage::CodeCompletionOption compared_option = option;
-				for (Vector<Pair<int, int>> match : ssq_lower_matches) {
+				for (Vector<Pair<int, int>> &match : ssq_lower_matches) {
 					compared_option.matches = match;
 					if (compare(compared_option, option)) {
 						option.matches = compared_option.matches;
@@ -3218,7 +3216,7 @@ TypedArray<int> CodeCompletionOptionCompare::get_option_caracteristics(const Scr
 	carac.push_back(option.location);
 	const char32_t *tgt = &base[0];
 	int bad_case = 0;
-	for (Pair<int, int> match : option.matches) {
+	for (const Pair<int, int> &match : option.matches) {
 		const char32_t *ssq = &option.display[match.first];
 		for (int j = 0; j < match.second; j++, ssq++, tgt++) {
 			if (*ssq != *tgt) {
