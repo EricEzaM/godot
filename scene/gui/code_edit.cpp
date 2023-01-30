@@ -177,12 +177,12 @@ void CodeEdit::_notification(int p_what) {
 					}
 
 					Point2 match_pos = Point2(code_completion_rect.position.x + icon_area_size.x + icon_hsep, code_completion_rect.position.y + i * row_height);
-
+					//					print_line(code_completion_options[l].display,code_completion_options[l].matches.size());
 					for (int j = 0; j < code_completion_options[l].matches.size(); j++) {
 						Pair<int, int> match = code_completion_options[l].matches[j];
 						int match_offset = font->get_string_size(code_completion_options[l].display.substr(0, match.first), HORIZONTAL_ALIGNMENT_LEFT, -1, font_size).width;
 						int match_len = font->get_string_size(code_completion_options[l].display.substr(match.first, match.second), HORIZONTAL_ALIGNMENT_LEFT, -1, font_size).width;
-
+						//						print_line(match.first,"\t",match.second,"\t",match_offset,"\t",match_len);
 						draw_rect(Rect2(match_pos + Point2(match_offset, 0), Size2(match_len, row_height)), code_completion_existing_color);
 					}
 
@@ -1889,7 +1889,7 @@ void CodeEdit::request_code_completion(bool p_force) {
 	}
 }
 
-void CodeEdit::add_code_completion_option(CodeCompletionKind p_type, const String &p_display_text, const String &p_insert_text, const Color &p_text_color, const Ref<Resource> &p_icon, const Variant &p_value) {
+void CodeEdit::add_code_completion_option(CodeCompletionKind p_type, const String &p_display_text, const String &p_insert_text, const Color &p_text_color, const Ref<Resource> &p_icon, const Variant &p_value, CodeCompletionLocation p_location) {
 	ScriptLanguage::CodeCompletionOption completion_option;
 	completion_option.kind = (ScriptLanguage::CodeCompletionKind)p_type;
 	completion_option.display = p_display_text;
@@ -1897,6 +1897,7 @@ void CodeEdit::add_code_completion_option(CodeCompletionKind p_type, const Strin
 	completion_option.font_color = p_text_color;
 	completion_option.icon = p_icon;
 	completion_option.default_value = p_value;
+	completion_option.location = (ScriptLanguage::CodeCompletionLocation)p_location;
 	code_completion_option_submitted.push_back(completion_option);
 }
 
@@ -2279,9 +2280,13 @@ void CodeEdit::_bind_methods() {
 	BIND_ENUM_CONSTANT(KIND_FILE_PATH);
 	BIND_ENUM_CONSTANT(KIND_PLAIN_TEXT);
 
+	BIND_ENUM_CONSTANT(LOCATION_LOCAL);
+	BIND_ENUM_CONSTANT(LOCATION_BASE);
+	BIND_ENUM_CONSTANT(LOCATION_OTHER);
+
 	ClassDB::bind_method(D_METHOD("get_text_for_code_completion"), &CodeEdit::get_text_for_code_completion);
 	ClassDB::bind_method(D_METHOD("request_code_completion", "force"), &CodeEdit::request_code_completion, DEFVAL(false));
-	ClassDB::bind_method(D_METHOD("add_code_completion_option", "type", "display_text", "insert_text", "text_color", "icon", "value"), &CodeEdit::add_code_completion_option, DEFVAL(Color(1, 1, 1)), DEFVAL(Ref<Resource>()), DEFVAL(Variant::NIL));
+	ClassDB::bind_method(D_METHOD("add_code_completion_option", "type", "display_text", "insert_text", "text_color", "icon", "value", "location"), &CodeEdit::add_code_completion_option, DEFVAL(Color(1, 1, 1)), DEFVAL(Ref<Resource>()), DEFVAL(Variant::NIL), DEFVAL(LOCATION_OTHER));
 	ClassDB::bind_method(D_METHOD("update_code_completion_options", "force"), &CodeEdit::update_code_completion_options);
 	ClassDB::bind_method(D_METHOD("get_code_completion_options"), &CodeEdit::get_code_completion_options);
 	ClassDB::bind_method(D_METHOD("get_code_completion_option", "index"), &CodeEdit::get_code_completion_option);
@@ -2918,21 +2923,18 @@ void CodeEdit::_filter_code_completion_candidates_impl() {
 	}
 
 	/* Filter Options. */
-	/* For now handle only tradional quoted strings. */
+	/* For now handle only traditional quoted strings. */
 	bool single_quote = in_string != -1 && first_quote_col > 0 && delimiters[in_string].start_key == "'";
 
 	code_completion_options.clear();
 	code_completion_base = string_to_complete;
 
-	Vector<ScriptLanguage::CodeCompletionOption> completion_options_casei;
-	Vector<ScriptLanguage::CodeCompletionOption> completion_options_substr;
-	Vector<ScriptLanguage::CodeCompletionOption> completion_options_substr_casei;
-	Vector<ScriptLanguage::CodeCompletionOption> completion_options_subseq;
-	Vector<ScriptLanguage::CodeCompletionOption> completion_options_subseq_casei;
-
 	int max_width = 0;
 	String string_to_complete_lower = string_to_complete.to_lower();
+	CodeCompletionOptionCompare::base = string_to_complete;
+
 	for (ScriptLanguage::CodeCompletionOption &option : code_completion_option_sources) {
+		option.matches.clear();
 		if (single_quote && option.display.is_quoted()) {
 			option.display = option.display.unquote().quote("'");
 		}
@@ -2960,136 +2962,77 @@ void CodeEdit::_filter_code_completion_candidates_impl() {
 			continue;
 		}
 
-		/* This code works the same as:
-
-		if (option.display.begins_with(s)) {
-			completion_options.push_back(option);
-		} else if (option.display.to_lower().begins_with(s.to_lower())) {
-			completion_options_casei.push_back(option);
-		} else if (s.is_subsequence_of(option.display)) {
-			completion_options_subseq.push_back(option);
-		} else if (s.is_subsequence_ofn(option.display)) {
-			completion_options_subseq_casei.push_back(option);
-		}
-
-		But is more performant due to being inlined and looping over the characters only once
-		*/
+		// if (option.display.similarity(string_to_complete) < 0.1) {
+		// 	continue;
+		// }
 
 		String display_lower = option.display.to_lower();
-
-		const char32_t *ssq = &string_to_complete[0];
 		const char32_t *ssq_lower = &string_to_complete_lower[0];
-
-		const char32_t *tgt = &option.display[0];
 		const char32_t *tgt_lower = &display_lower[0];
-
-		const char32_t *sst = &string_to_complete[0];
-		const char32_t *sst_lower = &display_lower[0];
-
-		Vector<Pair<int, int>> ssq_matches;
-		int ssq_match_start = 0;
-		int ssq_match_len = 0;
-
-		Vector<Pair<int, int>> ssq_lower_matches;
-		int ssq_lower_match_start = 0;
-		int ssq_lower_match_len = 0;
-
-		int sst_start = -1;
-		int sst_lower_start = -1;
-
-		for (int i = 0; *tgt; tgt++, tgt_lower++, i++) {
-			// Check substring.
-			if (*sst == *tgt) {
-				sst++;
-				if (sst_start == -1) {
-					sst_start = i;
-				}
-			} else if (sst_start != -1 && *sst) {
-				sst = &string_to_complete[0];
-				sst_start = -1;
-			}
-
-			// Check subsequence.
-			if (*ssq == *tgt) {
-				ssq++;
-				if (ssq_match_len == 0) {
-					ssq_match_start = i;
-				}
-				ssq_match_len++;
-			} else if (ssq_match_len > 0) {
-				ssq_matches.push_back(Pair<int, int>(ssq_match_start, ssq_match_len));
-				ssq_match_len = 0;
-			}
-
-			// Check lower substring.
-			if (*sst_lower == *tgt) {
-				sst_lower++;
-				if (sst_lower_start == -1) {
-					sst_lower_start = i;
-				}
-			} else if (sst_lower_start != -1 && *sst_lower) {
-				sst_lower = &string_to_complete[0];
-				sst_lower_start = -1;
-			}
-
-			// Check lower subsequence.
-			if (*ssq_lower == *tgt_lower) {
-				ssq_lower++;
-				if (ssq_lower_match_len == 0) {
-					ssq_lower_match_start = i;
-				}
-				ssq_lower_match_len++;
-			} else if (ssq_lower_match_len > 0) {
-				ssq_lower_matches.push_back(Pair<int, int>(ssq_lower_match_start, ssq_lower_match_len));
-				ssq_lower_match_len = 0;
+		Vector<Vector<Pair<int, int>>> ssq_lower_matches;
+		for (int i = 0; *tgt_lower; i++, tgt_lower++) {
+			if (*tgt_lower == *ssq_lower) {
+				ssq_lower_matches.push_back({ { i, 1 } });
 			}
 		}
-
-		/* Matched the whole subsequence in s. */
-		if (!*ssq) { // Matched the whole subsequence in s.
-			option.matches.clear();
-
-			if (sst_start == 0) { // Matched substring in beginning of s.
-				option.matches.push_back(Pair<int, int>(sst_start, string_to_complete.length()));
-				code_completion_options.push_back(option);
-			} else if (sst_start > 0) { // Matched substring in s.
-				option.matches.push_back(Pair<int, int>(sst_start, string_to_complete.length()));
-				completion_options_substr.push_back(option);
-			} else {
-				if (ssq_match_len > 0) {
-					ssq_matches.push_back(Pair<int, int>(ssq_match_start, ssq_match_len));
+		ssq_lower++;
+		while (*ssq_lower) {
+			Vector<Vector<Pair<int, int>>> S_next;
+			for (Vector<Pair<int, int>> s : ssq_lower_matches) {
+				Pair<int, int> last_match = s[s.size() - 1];
+				int next_index = last_match.first + last_match.second;
+				// get the last index from current sequence
+				// and look for next char starting from that index
+				if (option.display[next_index] == *ssq_lower) {
+					Vector<Pair<int, int>> new_match = s;
+					Pair<int, int> last_new_match = new_match[new_match.size() - 1];
+					last_new_match.second++;
+					new_match.set(new_match.size() - 1, last_new_match);
+					S_next.push_back(new_match);
 				}
-				option.matches.append_array(ssq_matches);
-				completion_options_subseq.push_back(option);
-			}
-			if (font.is_valid()) {
-				max_width = MAX(max_width, font->get_string_size(option.display, HORIZONTAL_ALIGNMENT_LEFT, -1, font_size).width + offset);
-			}
-		} else if (!*ssq_lower) { // Matched the whole subsequence in s_lower.
-			option.matches.clear();
-
-			if (sst_lower_start == 0) { // Matched substring in beginning of s_lower.
-				option.matches.push_back(Pair<int, int>(sst_lower_start, string_to_complete.length()));
-				completion_options_casei.push_back(option);
-			} else if (sst_lower_start > 0) { // Matched substring in s_lower.
-				option.matches.push_back(Pair<int, int>(sst_lower_start, string_to_complete.length()));
-				completion_options_substr_casei.push_back(option);
-			} else {
-				if (ssq_lower_match_len > 0) {
-					ssq_lower_matches.push_back(Pair<int, int>(ssq_lower_match_start, ssq_lower_match_len));
+				for (int i = next_index + 1; i < option.display.length(); i++) {
+					if (option.display[i] == *ssq_lower) {
+						Vector<Pair<int, int>> new_match = s;
+						new_match.push_back({ i, 1 });
+						S_next.push_back(new_match);
+					}
 				}
-				option.matches.append_array(ssq_lower_matches);
-				completion_options_subseq_casei.push_back(option);
 			}
+			ssq_lower_matches = S_next;
+			ssq_lower++;
+		}
+
+		if (ssq_lower_matches.size() > 0) {
+			print_line(option.display, "\t -> \t", string_to_complete);
+			std::for_each(ssq_lower_matches.begin(), ssq_lower_matches.end(), [](Vector<Pair<int, int>> s) {
+				String to_print = "[";
+				std::for_each(s.begin(), s.end(), [&to_print](Pair<int, int> i) {
+					to_print = to_print + ",(" + stringify_variants(i.first) + "," + stringify_variants(i.second) + ")";
+				});
+				to_print = to_print + "]";
+				print_line(to_print);
+			});
+		}
+		if (ssq_lower_matches.size() > 0) {
+			option.matches = ssq_lower_matches[0];
+			ssq_lower_matches = ssq_lower_matches.slice(1);
+			if (ssq_lower_matches.size() > 0) {
+				CodeCompletionOptionCompare compare;
+				ScriptLanguage::CodeCompletionOption compared_option = option;
+				for (Vector<Pair<int, int>> match : ssq_lower_matches) {
+					compared_option.matches = match;
+					if (compare(compared_option, option)) {
+						option.matches = compared_option.matches;
+					}
+				}
+			}
+
+			code_completion_options.push_back(option);
 			if (font.is_valid()) {
 				max_width = MAX(max_width, font->get_string_size(option.display, HORIZONTAL_ALIGNMENT_LEFT, -1, font_size).width + offset);
 			}
 		}
 	}
-
-	code_completion_options.append_array(completion_options_casei);
-	code_completion_options.append_array(completion_options_subseq);
-	code_completion_options.append_array(completion_options_subseq_casei);
 
 	/* No options to complete, cancel. */
 	if (code_completion_options.size() == 0) {
@@ -3102,6 +3045,8 @@ void CodeEdit::_filter_code_completion_candidates_impl() {
 		cancel_code_completion();
 		return;
 	}
+
+	code_completion_options.sort_custom<CodeCompletionOptionCompare>();
 
 	code_completion_longest_line = MIN(max_width, code_completion_max_width * font_size);
 	code_completion_current_selected = 0;
@@ -3230,4 +3175,84 @@ CodeEdit::CodeEdit() {
 }
 
 CodeEdit::~CodeEdit() {
+}
+
+String CodeCompletionOptionCompare::base;
+
+int levenshtein_distance(const String &source, const String &target) {
+	if (source.size() > target.size()) {
+		return levenshtein_distance(target, source);
+	}
+
+	const int min_size = source.size();
+	const int max_size = target.size();
+	Vector<int> lev_dist;
+	lev_dist.resize(min_size + 1);
+
+	for (int i = 0; i <= min_size; ++i) {
+		lev_dist.write[i] = i;
+	}
+
+	for (int j = 1; j <= max_size; ++j) {
+		int previous_diagonal = lev_dist[0];
+		lev_dist.write[0] += 1;
+
+		for (int i = 1; i <= min_size; ++i) {
+			const int previous_diagonal_save = lev_dist[i];
+			if (source[i - 1] == target[j - 1]) {
+				lev_dist.write[i] = previous_diagonal;
+			} else {
+				lev_dist.write[i] = MIN(MIN(lev_dist[i - 1], lev_dist[i]), previous_diagonal) + 1;
+			}
+			previous_diagonal = previous_diagonal_save;
+		}
+	}
+
+	return lev_dist[min_size];
+}
+
+TypedArray<int> CodeCompletionOptionCompare::get_option_caracteristics(const ScriptLanguage::CodeCompletionOption option) const {
+	TypedArray<int> carac;
+	carac.push_back(option.matches.size());
+	carac.push_back((option.matches[0].first == 0) ? 0 : 1);
+	carac.push_back(option.location);
+	const char32_t *tgt = &base[0];
+	int bad_case = 0;
+	for (Pair<int, int> match : option.matches) {
+		const char32_t *ssq = &option.display[match.first];
+		for (int j = 0; j < match.second; j++, ssq++, tgt++) {
+			if (*ssq != *tgt) {
+				bad_case++;
+			}
+		}
+	}
+	carac.push_back(bad_case);
+	carac.push_back(option.matches[0].first);
+	return carac;
+}
+
+// Return true if l should come before r
+bool CodeCompletionOptionCompare::operator()(const ScriptLanguage::CodeCompletionOption &l, const ScriptLanguage::CodeCompletionOption &r) const {
+	// Get position of exact match
+
+	// Check if we are not completing an empty string in this case there is no reason to get matches caracteristics.
+	// This enables us to assure option passed to get_option_caracteristics are not null matches.
+	if (base.length() == 0) {
+		return l.display < r.display;
+	}
+	TypedArray<int> lcarac = get_option_caracteristics(l);
+	TypedArray<int> rcarac = get_option_caracteristics(r);
+	if (lcarac != rcarac) {
+		return lcarac < rcarac;
+	}
+	// to get here they need to have the same size so we can take the size of whichever we want
+	for (int i = 0; i < l.matches.size(); ++i) {
+		if (l.matches[i].first != r.matches[i].first) {
+			return l.matches[i].first < r.matches[i].first;
+		}
+		if (l.matches[i].second != r.matches[i].second) {
+			return l.matches[i].second > r.matches[i].second;
+		}
+	}
+	return l.display < r.display;
 }
