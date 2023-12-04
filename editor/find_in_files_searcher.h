@@ -40,7 +40,7 @@ class RegEx;
 class ClassDB;
 
 class FindInFilesSearcher : public Object {
-	GDCLASS(FindInFilesSearcher, Object);
+	GDCLASS(FindInFilesSearcher, Object)
 	_THREAD_SAFE_CLASS_
 public:
 	struct FindResult {

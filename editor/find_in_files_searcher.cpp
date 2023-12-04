@@ -360,8 +360,8 @@ String FindInFilesSearcher::get_replace_match_preview(const FindResult &p_result
 	Ref<FileAccess> f = FileAccess::open(p_result.path, FileAccess::READ);
 	ERR_FAIL_COND_V_MSG(f.is_null(), String(), vformat("Cannot open file from path '%s'.", p_result.path));
 
-	const String text = f->get_as_text(true);
-	const String to_replace = text.substr(p_result.start_in_file, p_result.end_in_file - p_result.start_in_file);
+	const String file_text = f->get_as_text(true);
+	const String to_replace = file_text.substr(p_result.start_in_file, p_result.end_in_file - p_result.start_in_file);
 	const String new_text = regex->sub(to_replace, p_replacement, false);
 
 	return new_text;
@@ -410,11 +410,16 @@ void FindInFilesSearcher::start() {
 }
 
 void FindInFilesSearcher::stop() {
+	if (!worker_thread.is_started()) {
+		return;
+	}
+
 	{
 		// Mark as cancelled in a separate scope so that we don't deadlock with _is_cancelled() in the thread.
 		_THREAD_SAFE_METHOD_
 		is_cancelled = true;
 	}
+
 	// Should be near-immediate as long as _is_cancelled() is checked often in the worker thread.
 	worker_thread.wait_to_finish();
 

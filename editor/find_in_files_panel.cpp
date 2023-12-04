@@ -36,6 +36,7 @@
 #include "plugins/script_editor_plugin.h"
 #include "scene/gui/box_container.h"
 #include "scene/gui/split_container.h"
+#include "scene/gui/tab_container.h"
 #include "scene/gui/tree.h"
 
 FindInFilesPanel2 *FindInFilesPanel2::singleton = nullptr;
