@@ -422,9 +422,6 @@ void FindInFilesSearcher::stop() {
 
 	// Should be near-immediate as long as _is_cancelled() is checked often in the worker thread.
 	worker_thread.wait_to_finish();
-
-	_THREAD_SAFE_METHOD_
-	status = FindInFilesStatus();
 }
 
 bool FindInFilesSearcher::is_valid(String &r_message) const {

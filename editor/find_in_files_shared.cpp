@@ -109,19 +109,23 @@ FindInFilesEditor::~FindInFilesEditor() {
 	editor_panel->queue_free();
 }
 
-void draw_find_result_tree_item(Tree *p_tree, const TreeItem *p_item, Rect2 p_rect, FindInFilesSearcher::FindResult p_result, bool p_draw_line_only) {
+void draw_find_result_tree_item(Tree *p_tree, const TreeItem *p_item, Rect2 p_rect, List<FindInFilesSearcher::FindResult> *p_results) {
+	ERR_FAIL_COND_MSG(p_results->is_empty(), "Results must contain at least one item");
+
 	Ref<Font> font = p_tree->get_theme_font(SNAME("font"));
 	int font_size = p_tree->get_theme_font_size(SNAME("font_size"));
 
-	int original_size = p_result.line_begin_string.size();
+	FindInFilesSearcher::FindResult first_result = p_results->front()->get();
+
+	int original_size = first_result.line_begin_string.size();
 	int trimmed_size = p_item->get_text(0).size();
 
-	if (trimmed_size < 150) {
-		int start_highlight_col = trimmed_size - original_size + p_result.start_col;
-		int highlight_length = p_result.start_line != p_result.end_line ? -1 : p_result.end_col - p_result.start_col;
+	for (const FindInFilesSearcher::FindResult &result : *p_results) {
+		int start_highlight_col = trimmed_size - original_size + result.start_col;
+		int highlight_length = result.start_line != result.end_line ? -1 : result.end_col - result.start_col;
 
 		Rect2 match_rect = p_rect;
-		match_rect.position.x += font->get_string_size(p_item->get_text(0).left(start_highlight_col), HORIZONTAL_ALIGNMENT_LEFT, -1, font_size).x;
+		match_rect.position.x += font->get_string_size(p_item->get_text(0).left(start_highlight_col), HORIZONTAL_ALIGNMENT_LEFT, -1, font_size).x + p_tree->get_theme_constant(SNAME("inner_item_margin_left"), SNAME("Tree"));
 		match_rect.size.x = font->get_string_size(p_item->get_text(0).substr(start_highlight_col, highlight_length), HORIZONTAL_ALIGNMENT_LEFT, -1, font_size).x;
 		match_rect.position.y += 1 * EDSCALE;
 		match_rect.size.y -= 2 * EDSCALE;
@@ -130,22 +134,14 @@ void draw_find_result_tree_item(Tree *p_tree, const TreeItem *p_item, Rect2 p_re
 		p_tree->draw_rect(match_rect, p_tree->get_theme_color(SNAME("accent_color"), SNAME("Editor")).inverted() * Color(1, 1, 1, 0.35f));
 	}
 
-	Point2 info_string_pos;
-	if (p_draw_line_only) {
-		info_string_pos = font->get_string_size(p_item->get_text(0), HORIZONTAL_ALIGNMENT_LEFT, -1, font_size) + p_rect.get_position() + Point2(5, 0);
-	} else {
-		info_string_pos = Point2(p_rect.get_end().x, p_rect.get_position().y);
-	}
+	Size2 item_text_size = font->get_string_size(p_item->get_text(0), HORIZONTAL_ALIGNMENT_LEFT, -1, font_size);
+	const String multiple_instances_text = p_results->size() == 1 ? "" : " (x" + itos(p_results->size()) + ")";
+	const String line_text = ":" + itos(first_result.start_line + 1) + multiple_instances_text;
+	Size2 line_text_size = font->get_string_size(line_text, HORIZONTAL_ALIGNMENT_LEFT, -1, font_size);
 
-	const String file_text = p_result.path.get_file();
-	const String line_text = ":" + itos(p_result.start_line + 1);
-	const String full_text = p_draw_line_only ? line_text : file_text + line_text;
+	Point2 info_string_pos = p_rect.get_position() + item_text_size;
+	info_string_pos.x += 8; // Buffer between the end of the item text and the start of the info text
+	info_string_pos.y += Math::floor((p_rect.size.y - line_text_size.y) * 0.5) - p_tree->get_theme_constant(SNAME("inner_item_margin_top")); // Center vertically
 
-	if (!p_draw_line_only) {
-		const Size2 full_string_size = font->get_string_size(full_text, HORIZONTAL_ALIGNMENT_RIGHT, -1, font_size);
-		info_string_pos.x -= 2 * EDSCALE + full_string_size.width;
-		info_string_pos.y += p_rect.size.y - full_string_size.y / 2;
-	}
-
-	p_tree->draw_string(font, info_string_pos, full_text, HORIZONTAL_ALIGNMENT_RIGHT, -1, font_size, Color(1, 1, 1, 0.4f));
+	p_tree->draw_string(font, info_string_pos, line_text, HORIZONTAL_ALIGNMENT_RIGHT, -1, font_size, Color(1, 1, 1, 0.4f));
 }

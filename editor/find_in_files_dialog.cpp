@@ -159,6 +159,12 @@ void FindInFilesDialog2::_run_search() {
 	update_poll_timer->stop();
 	searcher->stop();
 
+	// Clear results
+	result_items.clear();
+	results->clear();
+	results->create_item();
+	_update_editor();
+
 	// Update searcher options for next search.
 	searcher->set_case_sensitive(match_case_btn->is_pressed());
 	searcher->set_whole_words(match_word_btn->is_pressed());
@@ -187,12 +193,6 @@ void FindInFilesDialog2::_run_search() {
 		search_validation->set_tooltip_text(message);
 		return;
 	}
-
-	// Clear results
-	result_items.clear();
-	results->clear();
-	results->create_item();
-	_update_editor();
 
 	// Start new search.
 	searcher->start();
@@ -252,7 +252,7 @@ void FindInFilesDialog2::_draw_result_text(Object *p_item_obj, const Rect2 p_rec
 	HashMap<String, FindInFilesSearcher::FindResult>::Iterator E = result_items.find(id);
 	ERR_FAIL_COND_MSG(!E, "Result item could not be found for TreeItem id.");
 
-	draw_find_result_tree_item(results, item, p_rect, E->value, false);
+	// draw_find_result_tree_item(results, item, p_rect, E->value);
 }
 
 void FindInFilesDialog2::_save_recent_filters(bool p_save_to_editor_cfg) {

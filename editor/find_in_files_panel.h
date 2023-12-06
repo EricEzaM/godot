@@ -47,17 +47,9 @@ class Tree;
 class FindInFilesPanelTab : public Control {
 	GDCLASS(FindInFilesPanelTab, Control);
 
-public:
-	enum GroupingModeFlags {
-		FILE = 1 << 1,
-		DIRECTORY = 1 << 2,
-	};
-
-private:
-	int grouping_mode = FILE | DIRECTORY;
-
-	Ref<Texture2D> folder_icon;
 	Ref<Texture2D> file_icon;
+	Ref<Texture2D> folder_icon;
+	Color folder_icon_color;
 
 	FindInFilesSearcher *searcher;
 	Timer *update_poll_timer;
@@ -93,9 +85,6 @@ protected:
 public:
 	void expand_collapse_tree(bool p_collapse);
 
-	void set_grouping_mode(int p_mode);
-	int get_grouping_mode() const;
-
 	FindInFilesPanelTab(FindInFilesSearcher::SearchInputData p_input_data);
 	~FindInFilesPanelTab();
 };
@@ -109,8 +98,6 @@ class FindInFilesPanel2 : public Control {
 
 	Button *refresh_btn;
 	Button *configure_btn;
-	Button *group_directory_btn;
-	Button *group_files_btn;
 	Button *expand_all_btn;
 	Button *collapse_all_btn;
 	Button *show_source_btn;
@@ -118,7 +105,6 @@ class FindInFilesPanel2 : public Control {
 	void _on_tab_changed(int p_new_tab);
 	void _on_tab_button_pressed(int p_tab);
 	void _expand_collapse_tree(bool p_collapse);
-	void _toggle_grouping(bool p_toggled_on, FindInFilesPanelTab::GroupingModeFlags flag);
 
 protected:
 	void _notification(int p_what);
@@ -130,7 +116,5 @@ public:
 
 	FindInFilesPanel2();
 };
-
-VARIANT_ENUM_CAST(FindInFilesPanelTab::GroupingModeFlags)
 
 #endif // FIND_IN_FILES_PANEL_H

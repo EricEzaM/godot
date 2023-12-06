@@ -47,13 +47,17 @@ void FindInFilesPanelTab::_on_result_activated() {
 		return;
 	}
 
-	String path = selected->get_metadata(0);
-	if (path.is_empty()) {
+	Variant path = selected->get_metadata(0);
+	if (!path.is_string() || ((String)path).is_empty()) {
+		selected->set_collapsed(!selected->is_collapsed());
+		return;
+	}
+
+	if (!FileAccess::exists(path)) {
 		return;
 	}
 
 	ScriptEditor::get_singleton()->open_file(path, true);
-	hide();
 }
 
 void FindInFilesPanelTab::_reset() {
@@ -80,61 +84,68 @@ void FindInFilesPanelTab::_update_search_status() {
 
 	results->get_root()->set_text(0, vformat("%s results", status.results.size()));
 
-	for (const FindInFilesSearcher::FindResult &r : status.results) {
-		String result_id = vformat("%s_%s_%s_%s_%s", r.path, r.start_line, r.start_col, r.end_line, r.end_col);
+	for (const FindInFilesSearcher::FindResult &result : status.results) {
+		String result_id = vformat("%s_%s_%s_%s_%s", result.path, result.start_line, result.start_col, result.end_line, result.end_col);
 		if (result_items.has(result_id)) {
 			continue;
 		}
 
-		TreeItem *parent;
-		bool is_group_dir = (grouping_mode & DIRECTORY) == DIRECTORY;
-		bool is_group_file = (grouping_mode & FILE) == FILE;
-		if (!is_group_dir && !is_group_file) {
-			parent = results->get_root();
-		} else if (is_group_file && !is_group_dir) {
-			String file_name = r.path.get_file();
-			if (!result_filesystem_levels.has(file_name)) {
-				TreeItem *item = results->create_item();
-				item->set_text(0, file_name);
-				item->set_tooltip_text(0, r.path);
-				item->set_icon(0, file_icon);
-				result_filesystem_levels[file_name] = item;
-			}
+		result_items[result_id] = result;
 
-			parent = result_filesystem_levels[file_name];
-		} else {
-			String path_no_res = r.path.substr(6);
-			int slice_count = path_no_res.get_slice_count("/");
-			String base_path = "";
+		// Grouping by directory and file, parent for the item is the tree item representing the file.
+		String path_no_res = result.path.substr(6); // The path without res://
+		const int slice_count = path_no_res.get_slice_count("/");
+		String base_path = "";
 
-			for (int i = 0; i < slice_count; ++i) {
-				if (i == slice_count - 1 && !is_group_file) {
-					continue;
+		for (int i = 0; i < slice_count; ++i) {
+			String slice = path_no_res.get_slicec('/', i);
+
+			// Build up the path gradually from the slices to make the tree structure
+			String current_path = base_path + (i == 0 ? "" : "/") + slice;
+
+			// Create the tree item if it does not exist
+			if (!result_filesystem_levels.has(current_path)) {
+				TreeItem *item = result_filesystem_levels.has(base_path) ? results->create_item(result_filesystem_levels[base_path]) : results->create_item();
+				item->set_text(0, slice);
+
+				// If it's the last slice, it's the file, otherwise its a folder.
+				if (i == slice_count - 1) {
+					item->set_icon(0, file_icon);
+					item->set_tooltip_text(0, result.path);
+				} else {
+					item->set_icon(0, folder_icon);
+					item->set_icon_modulate(0, folder_icon_color);
 				}
-
-				String slice = path_no_res.get_slicec('/', i);
-				String current_path = base_path + (i == 0 ? "" : "/") + slice;
-				if (!result_filesystem_levels.has(current_path)) {
-					TreeItem *item = result_filesystem_levels.has(base_path) ? results->create_item(result_filesystem_levels[base_path]) : results->create_item();
-					item->set_text(0, slice);
-					if (i == slice_count - 1) {
-						item->set_icon(0, file_icon);
-						item->set_tooltip_text(0, r.path);
-					} else {
-						item->set_icon(0, folder_icon);
-					}
-					result_filesystem_levels[current_path] = item;
-				}
-				base_path = current_path;
+				result_filesystem_levels[current_path] = item;
 			}
+			base_path = current_path;
+		}
 
-			parent = result_filesystem_levels[base_path];
+		TreeItem *parent = result_filesystem_levels[base_path];
+
+		TreeItem *result_on_same_line = nullptr;
+		for (int i = 0; i < parent->get_child_count(); ++i) {
+			TreeItem *search_result_item = parent->get_child(i);
+			if ((int)search_result_item->get_meta("line") == result.start_line) {
+				result_on_same_line = search_result_item;
+				break;
+			}
+		}
+
+		// Result is on the same line as an existing result that has a tree item.
+		// Add this result id to the list of results that tree item represents.
+		if (result_on_same_line) {
+			Array ids = result_on_same_line->get_meta("ids", Array());
+			ERR_FAIL_COND_MSG(ids.is_empty(), "Existsing result had array size of zero, something went wrong!");
+			ids.push_back(result_id);
+			// result_on_same_line->set_meta("ids", ids);
+			continue;
 		}
 
 		TreeItem *item = results->create_item(parent);
 		item->set_cell_mode(0, TreeItem::CELL_MODE_CUSTOM);
 
-		String text = r.line_begin_string;
+		String text = result.line_begin_string;
 		text = text.strip_edges(true, false);
 		// Only draw text up to a limit to prevent slowdown due to long one-liner files.
 		if (text.size() > 150) {
@@ -142,12 +153,13 @@ void FindInFilesPanelTab::_update_search_status() {
 		}
 
 		item->set_text(0, text);
-		item->set_metadata(0, r.path);
-		item->set_meta("id", result_id);
-		item->set_custom_draw(0, this, "_draw_result_text");
+		item->set_metadata(0, result.path);
 
-		// TODO combined results which happen on the same line into one tree item.
-		result_items[result_id] = r;
+		Array ids = Array();
+		ids.push_back(result_id);
+		item->set_meta("ids", ids);
+		item->set_meta("line", result.start_line);
+		item->set_custom_draw(0, this, "_draw_result_text");
 	}
 
 	// Select first result when it is available - do not override user selection.
@@ -180,12 +192,14 @@ void FindInFilesPanelTab::_update_editor() {
 		return;
 	}
 
-	const String id = selected->get_meta("id", "");
-	if (id.is_empty()) {
+	const Array ids = selected->get_meta("ids", Array());
+	if (ids.is_empty()) {
 		editor_panel->clear_file();
 		return;
 	}
 
+	// All the ids will be for the same file, doesnt matter which one we get.
+	const String id = ids.front();
 	if (result_items.has(id)) {
 		const FindInFilesSearcher::FindResult r = result_items[id];
 		editor_panel->open_file(r.path, r.start_line);
@@ -209,26 +223,27 @@ void FindInFilesPanelTab::_draw_result_text(Object *p_item_obj, const Rect2 p_re
 	TreeItem *item = Object::cast_to<TreeItem>(p_item_obj);
 	ERR_FAIL_COND_MSG(!item, "Item must be a TreeItem for custom draw.");
 
-	const String id = item->get_meta("id", "");
-	HashMap<String, FindInFilesSearcher::FindResult>::Iterator E = result_items.find(id);
-	ERR_FAIL_COND_MSG(!E, "Result item could not be found for TreeItem id '" + id + "'");
+	Vector<Variant> ids = item->get_meta("ids", Array());
+	List<FindInFilesSearcher::FindResult> results_for_item;
+	for (const Variant &id : ids) {
+		HashMap<String, FindInFilesSearcher::FindResult>::Iterator found_result = result_items.find(id);
+		ERR_FAIL_COND_MSG(!found_result, "Result item could not be found for TreeItem id '" + id.stringify() + "'");
+		results_for_item.push_back(found_result->value);
+	}
 
-	bool is_group_file = (grouping_mode & FILE) == FILE;
-	draw_find_result_tree_item(results, item, p_rect, E->value, is_group_file);
+	draw_find_result_tree_item(results, item, p_rect, &results_for_item);
 }
 
 void FindInFilesPanelTab::_bind_methods() {
 	ClassDB::bind_method("_draw_result_text", &FindInFilesPanelTab::_draw_result_text);
-
-	BIND_ENUM_CONSTANT(GroupingModeFlags::FILE)
-	BIND_ENUM_CONSTANT(GroupingModeFlags::DIRECTORY)
 }
 
 void FindInFilesPanelTab::_notification(int p_what) {
 	switch (p_what) {
 		case NOTIFICATION_ENTER_TREE: {
-			file_icon = get_theme_icon(SNAME("File"), SNAME("EditorIcons"));
-			folder_icon = get_theme_icon(SNAME("Folder"), SNAME("EditorIcons"));
+			file_icon = get_editor_theme_icon(SNAME("File"));
+			folder_icon = get_editor_theme_icon(SNAME("Folder"));
+			folder_icon_color = get_theme_color(SNAME("folder_icon_color"), SNAME("FileDialog"));
 		} break;
 		case NOTIFICATION_POST_ENTER_TREE: {
 			if (update_poll_timer->is_stopped() && !searcher->get_status().finished) {
@@ -253,16 +268,6 @@ void FindInFilesPanelTab::_run_search() {
 void FindInFilesPanelTab::expand_collapse_tree(bool p_collapse) {
 	ERR_FAIL_COND(!results->get_root());
 	results->get_root()->set_collapsed_recursive(p_collapse);
-}
-
-void FindInFilesPanelTab::set_grouping_mode(int p_mode) {
-	grouping_mode = p_mode;
-	_reset();
-	_update_search_status();
-}
-
-int FindInFilesPanelTab::get_grouping_mode() const {
-	return grouping_mode;
 }
 
 FindInFilesPanelTab::FindInFilesPanelTab(FindInFilesSearcher::SearchInputData p_input_data) {
@@ -301,8 +306,8 @@ FindInFilesPanelTab::FindInFilesPanelTab(FindInFilesSearcher::SearchInputData p_
 	continue_confirm_dialog = memnew(ConfirmationDialog);
 	add_child(continue_confirm_dialog);
 	continue_confirm_dialog->connect("confirmed", callable_mp(this, &FindInFilesPanelTab::_soft_limit_continue_search));
-	continue_confirm_dialog->connect("cancelled", callable_mp(this, &FindInFilesPanelTab::_soft_limit_cancel_search));
-	continue_confirm_dialog->set_text(TTR(vformat("%s+ results have been found. Do you wish to continue the search? This may take a long time.", result_limit)));
+	continue_confirm_dialog->connect("canceled", callable_mp(this, &FindInFilesPanelTab::_soft_limit_cancel_search));
+	continue_confirm_dialog->set_text(vformat(TTR("%s+ results have been found. Do you wish to continue the search?\nThis may take a long time. Editor performance may degrade."), result_limit));
 }
 
 FindInFilesPanelTab::~FindInFilesPanelTab() {
@@ -321,10 +326,6 @@ void FindInFilesPanel2::_on_tab_changed(int p_new_tab) {
 	}
 	FindInFilesPanelTab *tab = cast_to<FindInFilesPanelTab>(current);
 	ERR_FAIL_NULL_MSG(tab, "Tab of find in files panel is of incorrect type");
-
-	const int mode = tab->get_grouping_mode();
-	group_files_btn->set_pressed((mode & FindInFilesPanelTab::GroupingModeFlags::FILE) == FindInFilesPanelTab::GroupingModeFlags::FILE);
-	group_directory_btn->set_pressed((mode & FindInFilesPanelTab::GroupingModeFlags::DIRECTORY) == FindInFilesPanelTab::GroupingModeFlags::DIRECTORY);
 }
 
 void FindInFilesPanel2::_on_tab_button_pressed(int p_tab) {
@@ -350,35 +351,18 @@ void FindInFilesPanel2::_expand_collapse_tree(bool p_collapse) {
 	tab->expand_collapse_tree(p_collapse);
 }
 
-void FindInFilesPanel2::_toggle_grouping(bool p_toggled_on, FindInFilesPanelTab::GroupingModeFlags flag) {
-	Control *current = tabs->get_current_tab_control();
-	FindInFilesPanelTab *tab = cast_to<FindInFilesPanelTab>(current);
-	ERR_FAIL_NULL_MSG(tab, "Tab of find in files panel is of incorrect type");
-
-	int mode = tab->get_grouping_mode();
-	if (p_toggled_on) {
-		mode |= flag;
-	} else {
-		mode &= ~flag;
-	}
-
-	tab->set_grouping_mode(mode);
-}
-
 void FindInFilesPanel2::_notification(int p_what) {
 	switch (p_what) {
 		case NOTIFICATION_READY:
 		case NOTIFICATION_THEME_CHANGED: {
-			refresh_btn->set_icon(get_theme_icon(SNAME("Reload"), SNAME("EditorIcons")));
-			configure_btn->set_icon(get_theme_icon(SNAME("Tools"), SNAME("EditorIcons")));
-			group_directory_btn->set_icon(get_theme_icon(SNAME("Folder"), SNAME("EditorIcons")));
-			group_files_btn->set_icon(get_theme_icon(SNAME("File"), SNAME("EditorIcons")));
-			expand_all_btn->set_icon(get_theme_icon(SNAME("ExpandTree"), SNAME("EditorIcons")));
-			collapse_all_btn->set_icon(get_theme_icon(SNAME("CollapseTree"), SNAME("EditorIcons")));
-			show_source_btn->set_icon(get_theme_icon(SNAME("Script"), SNAME("EditorIcons")));
+			refresh_btn->set_icon(get_editor_theme_icon(SNAME("Reload")));
+			configure_btn->set_icon(get_editor_theme_icon(SNAME("Tools")));
+			expand_all_btn->set_icon(get_editor_theme_icon(SNAME("ExpandTree")));
+			collapse_all_btn->set_icon(get_editor_theme_icon(SNAME("CollapseTree")));
+			show_source_btn->set_icon(get_editor_theme_icon(SNAME("Script")));
 
 			for (int i = 0; i < tabs->get_tab_count(); ++i) {
-				tabs->set_tab_button_icon(i, get_theme_icon(SNAME("Close"), SNAME("EditorIcons")));
+				tabs->set_tab_button_icon(i, get_editor_theme_icon(SNAME("Close")));
 			}
 		} break;
 	}
@@ -388,7 +372,7 @@ void FindInFilesPanel2::add_search(FindInFilesSearcher::SearchInputData p_input_
 	FindInFilesPanelTab *child = memnew(FindInFilesPanelTab(p_input_data));
 	tabs->add_child(child);
 	tabs->set_tab_title(tabs->get_tab_count() - 1, vformat("Find '%s'", p_input_data.text));
-	tabs->set_tab_button_icon(tabs->get_tab_count() - 1, get_theme_icon(SNAME("Close"), SNAME("EditorIcons")));
+	tabs->set_tab_button_icon(tabs->get_tab_count() - 1, get_editor_theme_icon(SNAME("Close")));
 }
 
 FindInFilesPanel2::FindInFilesPanel2() {
@@ -414,22 +398,6 @@ FindInFilesPanel2::FindInFilesPanel2() {
 	configure_btn->set_tooltip_text(TTR("Configure"));
 	configure_btn->set_flat(true);
 	buttons_vbox->add_child(configure_btn);
-
-	group_directory_btn = memnew(Button);
-	group_directory_btn->set_tooltip_text(TTR("Group by directory"));
-	group_directory_btn->set_flat(true);
-	group_directory_btn->set_toggle_mode(true);
-	group_directory_btn->set_pressed(true);
-	group_directory_btn->connect("toggled", callable_mp(this, &FindInFilesPanel2::_toggle_grouping).bind(FindInFilesPanelTab::GroupingModeFlags::DIRECTORY));
-	buttons_vbox->add_child(group_directory_btn);
-
-	group_files_btn = memnew(Button);
-	group_files_btn->set_tooltip_text(TTR("Group by files"));
-	group_files_btn->set_flat(true);
-	group_files_btn->set_toggle_mode(true);
-	group_files_btn->set_pressed(true);
-	group_files_btn->connect("toggled", callable_mp(this, &FindInFilesPanel2::_toggle_grouping).bind(FindInFilesPanelTab::GroupingModeFlags::FILE));
-	buttons_vbox->add_child(group_files_btn);
 
 	expand_all_btn = memnew(Button);
 	expand_all_btn->set_tooltip_text(TTR("Expand All"));
