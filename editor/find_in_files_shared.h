@@ -42,11 +42,11 @@ class TreeItem;
 class Tree;
 
 class FindInFilesContainerBase : public Control {
-	GDCLASS(FindInFilesContainerBase, Control);
+	GDCLASS(FindInFilesContainerBase, Control)
 };
 
-class FindInFilesEditor : public VBoxContainer {
-	GDCLASS(FindInFilesEditor, VBoxContainer);
+class FindInFilesFilePreview : public VBoxContainer {
+	GDCLASS(FindInFilesFilePreview, VBoxContainer)
 
 	ScriptEditorBase *editor = nullptr;
 
@@ -63,10 +63,10 @@ public:
 	void clear_file();
 	void open_file(String p_path, int p_line);
 
-	FindInFilesEditor();
-	~FindInFilesEditor();
+	FindInFilesFilePreview();
+	~FindInFilesFilePreview();
 };
 
-void draw_find_result_tree_item(Tree *p_tree, const TreeItem *p_item, Rect2 p_rect, List<FindInFilesSearcher::FindResult> *p_results);
+void _draw_find_result_tree_item(Tree *p_tree, const TreeItem *p_item, Rect2 p_rect, List<FindInFilesSearcher::FindResult> *p_results);
 
 #endif // FIND_IN_FILES_SHARED_H

@@ -37,7 +37,7 @@
 #include "scene/gui/dialogs.h"
 #include "scene/gui/item_list.h"
 
-class FindInFilesEditor;
+class FindInFilesFilePreview;
 class LineEdit;
 class CheckBox;
 class FileDialog;
@@ -71,8 +71,8 @@ class FindInFilesDialog2 : public AcceptDialog {
 	Label *replace_preview_label;
 	Label *replace_preview;
 
-	Tree *results;
-	FindInFilesEditor *editor_container;
+	FindInFilesTree *results;
+	FindInFilesFilePreview *editor_container;
 	Color invalid_result_color = Color(1, 0, 0);
 
 	Timer *update_poll_timer;
@@ -91,13 +91,11 @@ class FindInFilesDialog2 : public AcceptDialog {
 	void _on_recent_file_filter_selected(int p_idx);
 	void _on_match_regex_toggled(bool p_toggled_on);
 
-	void _update_editor();
+	void _update_file_preview();
 	void _update_selected_item();
-	void _on_result_activated();
+	void _on_open_file_requested(const String &p_path, int p_line);
 
 	void _on_mode_changed();
-
-	void _draw_result_text(Object *p_item_obj, Rect2 p_rect);
 
 	void _save_recent_filters(bool p_save_to_editor_cfg);
 	void _load_recent_filters();
@@ -109,7 +107,6 @@ class FindInFilesDialog2 : public AcceptDialog {
 
 protected:
 	void _notification(int p_what);
-	static void _bind_methods();
 
 	void custom_action(const String &) override;
 	void ok_pressed() override;
@@ -122,7 +119,6 @@ public:
 
 	void shortcut_input(const Ref<InputEvent> &p_event) override;
 
-	// Not a great name but using `get_mode()` hides the method of the same name on Window
 	FindInFilesMode get_dialog_mode() const;
 	void set_find_in_files_mode(FindInFilesMode p_mode);
 

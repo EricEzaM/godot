@@ -44,8 +44,9 @@ class FindInFilesSearcher : public Object {
 	_THREAD_SAFE_CLASS_
 public:
 	struct FindResult {
-		String path = "";
+		String id = "";
 
+		String path = "";
 		String line_begin_string = "";
 
 		int start_line = 0;
@@ -60,6 +61,7 @@ public:
 		FindResult() = default;
 
 		FindResult(const String &p_path, const String &p_line_string, int p_start_line, int p_start_col, int p_end_line, int p_end_col, int p_start_in_file, int p_end_in_file) :
+				id(vformat("%s_%s_%s_%s_%s", p_path, p_start_line, p_start_col, p_end_line, p_end_col)),
 				path(p_path),
 				line_begin_string(p_line_string),
 				start_line(p_start_line),

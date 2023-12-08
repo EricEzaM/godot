@@ -33,6 +33,7 @@
 #include "editor/editor_node.h"
 #include "editor/editor_scale.h"
 #include "find_in_files_shared.h"
+#include "find_in_files_tree.h"
 #include "plugins/script_editor_plugin.h"
 #include "scene/gui/box_container.h"
 #include "scene/gui/split_container.h"
@@ -41,30 +42,13 @@
 
 FindInFilesPanel2 *FindInFilesPanel2::singleton = nullptr;
 
-void FindInFilesPanelTab::_on_result_activated() {
-	TreeItem *selected = results->get_selected();
-	if (!selected) {
-		return;
-	}
-
-	Variant path = selected->get_metadata(0);
-	if (!path.is_string() || ((String)path).is_empty()) {
-		selected->set_collapsed(!selected->is_collapsed());
-		return;
-	}
-
-	if (!FileAccess::exists(path)) {
-		return;
-	}
-
-	ScriptEditor::get_singleton()->open_file(path, true);
+void FindInFilesPanelTab::_on_open_file_requested(const String &p_path, int p_line) {
+	auto res = ScriptEditor::get_singleton()->open_file(p_path, true);
+	ScriptEditor::get_singleton()->edit(res, p_line, 0);
 }
 
 void FindInFilesPanelTab::_reset() {
-	results->clear();
-	results->create_item();
-	results->get_root()->set_text(0, "res://");
-	results->get_root()->set_icon(0, folder_icon);
+	// TODO results tree .reset()
 
 	result_items.clear();
 	result_filesystem_levels.clear();
@@ -85,86 +69,13 @@ void FindInFilesPanelTab::_update_search_status() {
 	results->get_root()->set_text(0, vformat("%s results", status.results.size()));
 
 	for (const FindInFilesSearcher::FindResult &result : status.results) {
-		String result_id = vformat("%s_%s_%s_%s_%s", result.path, result.start_line, result.start_col, result.end_line, result.end_col);
-		if (result_items.has(result_id)) {
-			continue;
-		}
-
-		result_items[result_id] = result;
-
-		// Grouping by directory and file, parent for the item is the tree item representing the file.
-		String path_no_res = result.path.substr(6); // The path without res://
-		const int slice_count = path_no_res.get_slice_count("/");
-		String base_path = "";
-
-		for (int i = 0; i < slice_count; ++i) {
-			String slice = path_no_res.get_slicec('/', i);
-
-			// Build up the path gradually from the slices to make the tree structure
-			String current_path = base_path + (i == 0 ? "" : "/") + slice;
-
-			// Create the tree item if it does not exist
-			if (!result_filesystem_levels.has(current_path)) {
-				TreeItem *item = result_filesystem_levels.has(base_path) ? results->create_item(result_filesystem_levels[base_path]) : results->create_item();
-				item->set_text(0, slice);
-
-				// If it's the last slice, it's the file, otherwise its a folder.
-				if (i == slice_count - 1) {
-					item->set_icon(0, file_icon);
-					item->set_tooltip_text(0, result.path);
-				} else {
-					item->set_icon(0, folder_icon);
-					item->set_icon_modulate(0, folder_icon_color);
-				}
-				result_filesystem_levels[current_path] = item;
-			}
-			base_path = current_path;
-		}
-
-		TreeItem *parent = result_filesystem_levels[base_path];
-
-		TreeItem *result_on_same_line = nullptr;
-		for (int i = 0; i < parent->get_child_count(); ++i) {
-			TreeItem *search_result_item = parent->get_child(i);
-			if ((int)search_result_item->get_meta("line") == result.start_line) {
-				result_on_same_line = search_result_item;
-				break;
-			}
-		}
-
-		// Result is on the same line as an existing result that has a tree item.
-		// Add this result id to the list of results that tree item represents.
-		if (result_on_same_line) {
-			Array ids = result_on_same_line->get_meta("ids", Array());
-			ERR_FAIL_COND_MSG(ids.is_empty(), "Existsing result had array size of zero, something went wrong!");
-			ids.push_back(result_id);
-			// result_on_same_line->set_meta("ids", ids);
-			continue;
-		}
-
-		TreeItem *item = results->create_item(parent);
-		item->set_cell_mode(0, TreeItem::CELL_MODE_CUSTOM);
-
-		String text = result.line_begin_string;
-		text = text.strip_edges(true, false);
-		// Only draw text up to a limit to prevent slowdown due to long one-liner files.
-		if (text.size() > 150) {
-			text = text.substr(0, 150) + "...";
-		}
-
-		item->set_text(0, text);
-		item->set_metadata(0, result.path);
-
-		Array ids = Array();
-		ids.push_back(result_id);
-		item->set_meta("ids", ids);
-		item->set_meta("line", result.start_line);
-		item->set_custom_draw(0, this, "_draw_result_text");
+		results->add_result(result);
+		result_items[result.id] = result;
 	}
 
 	// Select first result when it is available - do not override user selection.
-	if (!results->get_selected() && results->get_root() && results->get_root()->get_first_child()) {
-		results->get_root()->get_first_child()->select(0);
+	if (!results->get_selected()) {
+		results->select_first_non_root();
 	}
 
 	if (status.limit_reached && status.soft_limit) {
@@ -185,7 +96,7 @@ void FindInFilesPanelTab::_update_searcher(FindInFilesSearcher::SearchInputData 
 	searcher->set_use_regex(p_input_data.match_use_regex);
 }
 
-void FindInFilesPanelTab::_update_editor() {
+void FindInFilesPanelTab::_update_file_preview() {
 	const TreeItem *selected = results->get_selected();
 	if (!selected) {
 		editor_panel->clear_file();
@@ -217,25 +128,6 @@ void FindInFilesPanelTab::_soft_limit_cancel_search() {
 	searcher->release_soft_limit(false);
 	update_poll_timer->stop();
 	searcher->stop();
-}
-
-void FindInFilesPanelTab::_draw_result_text(Object *p_item_obj, const Rect2 p_rect) {
-	TreeItem *item = Object::cast_to<TreeItem>(p_item_obj);
-	ERR_FAIL_COND_MSG(!item, "Item must be a TreeItem for custom draw.");
-
-	Vector<Variant> ids = item->get_meta("ids", Array());
-	List<FindInFilesSearcher::FindResult> results_for_item;
-	for (const Variant &id : ids) {
-		HashMap<String, FindInFilesSearcher::FindResult>::Iterator found_result = result_items.find(id);
-		ERR_FAIL_COND_MSG(!found_result, "Result item could not be found for TreeItem id '" + id.stringify() + "'");
-		results_for_item.push_back(found_result->value);
-	}
-
-	draw_find_result_tree_item(results, item, p_rect, &results_for_item);
-}
-
-void FindInFilesPanelTab::_bind_methods() {
-	ClassDB::bind_method("_draw_result_text", &FindInFilesPanelTab::_draw_result_text);
 }
 
 void FindInFilesPanelTab::_notification(int p_what) {
@@ -289,18 +181,15 @@ FindInFilesPanelTab::FindInFilesPanelTab(FindInFilesSearcher::SearchInputData p_
 	split->set_h_size_flags(SIZE_EXPAND_FILL);
 	add_child(split);
 
-	results = memnew(Tree);
+	results = memnew(FindInFilesTree(false));
 	results->set_stretch_ratio(0.5);
-	results->set_h_size_flags(Control::SIZE_EXPAND_FILL);
-	results->set_v_size_flags(Control::SIZE_EXPAND_FILL);
-	results->connect(SNAME("item_selected"), callable_mp(this, &FindInFilesPanelTab::_update_editor));
+	results->set_group_results_on_same_line(false);
+	results->connect(SNAME("item_selected"), callable_mp(this, &FindInFilesPanelTab::_update_file_preview));
 	// results->connect(SNAME("item_selected"), callable_mp(this, &FindInFilesPanelTab::_update_replace_preview));
-	results->connect(SNAME("item_activated"), callable_mp(this, &FindInFilesPanelTab::_on_result_activated));
-	results->set_select_mode(Tree::SELECT_ROW);
-	results->set_allow_rmb_select(true);
+	results->connect(SNAME("open_file_requested"), callable_mp(this, &FindInFilesPanelTab::_on_open_file_requested));
 	split->add_child(results);
 
-	editor_panel = memnew(FindInFilesEditor);
+	editor_panel = memnew(FindInFilesFilePreview);
 	split->add_child(editor_panel);
 
 	continue_confirm_dialog = memnew(ConfirmationDialog);
@@ -338,6 +227,10 @@ void FindInFilesPanel2::_on_tab_button_pressed(int p_tab) {
 
 	tabs->remove_child(tab);
 	tab->queue_free();
+
+	if (tabs->get_tab_count() == 0) {
+		EditorNode::get_singleton()->hide_bottom_panel();
+	}
 }
 
 void FindInFilesPanel2::_expand_collapse_tree(bool p_collapse) {
@@ -373,6 +266,7 @@ void FindInFilesPanel2::add_search(FindInFilesSearcher::SearchInputData p_input_
 	tabs->add_child(child);
 	tabs->set_tab_title(tabs->get_tab_count() - 1, vformat("Find '%s'", p_input_data.text));
 	tabs->set_tab_button_icon(tabs->get_tab_count() - 1, get_editor_theme_icon(SNAME("Close")));
+	tabs->set_current_tab(tabs->get_tab_idx_from_control(child));
 }
 
 FindInFilesPanel2::FindInFilesPanel2() {

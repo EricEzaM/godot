@@ -35,7 +35,7 @@
 #include "scene/gui/tree.h"
 #include "scene/resources/font.h"
 
-void FindInFilesEditor::_set_editor(ScriptEditorBase *p_editor) {
+void FindInFilesFilePreview::_set_editor(ScriptEditorBase *p_editor) {
 	if (editor_panel->get_child_count(false) == 1) {
 		Node *node = editor_panel->get_child(0, false);
 		editor_panel->remove_child(node);
@@ -54,13 +54,13 @@ void FindInFilesEditor::_set_editor(ScriptEditorBase *p_editor) {
 	}
 }
 
-void FindInFilesEditor::clear_file() {
-	current_file_display->set_text(TTR("No file selected."));
+void FindInFilesFilePreview::clear_file() {
+	current_file_display->set_text(TTR("Nothing selected"));
 	current_file_folder_display->set_text("");
 	_set_editor(nullptr);
 }
 
-void FindInFilesEditor::open_file(String p_path, int p_line) {
+void FindInFilesFilePreview::open_file(String p_path, int p_line) {
 	current_file_display->set_text(p_path.get_file());
 	current_file_folder_display->set_text(p_path.replace(p_path.get_file(), ""));
 
@@ -75,7 +75,7 @@ void FindInFilesEditor::open_file(String p_path, int p_line) {
 	}
 }
 
-void FindInFilesEditor::_notification(int p_what) {
+void FindInFilesFilePreview::_notification(int p_what) {
 	switch (p_what) {
 		case NOTIFICATION_READY:
 		case NOTIFICATION_THEME_CHANGED: {
@@ -84,7 +84,7 @@ void FindInFilesEditor::_notification(int p_what) {
 	}
 }
 
-FindInFilesEditor::FindInFilesEditor() {
+FindInFilesFilePreview::FindInFilesFilePreview() {
 	set_v_size_flags(Control::SIZE_EXPAND_FILL);
 	set_h_size_flags(Control::SIZE_EXPAND_FILL);
 
@@ -102,46 +102,9 @@ FindInFilesEditor::FindInFilesEditor() {
 	add_child(editor_panel);
 }
 
-FindInFilesEditor::~FindInFilesEditor() {
+FindInFilesFilePreview::~FindInFilesFilePreview() {
 	clear_file();
 	current_file_display->queue_free();
 	current_file_folder_display->queue_free();
 	editor_panel->queue_free();
-}
-
-void draw_find_result_tree_item(Tree *p_tree, const TreeItem *p_item, Rect2 p_rect, List<FindInFilesSearcher::FindResult> *p_results) {
-	ERR_FAIL_COND_MSG(p_results->is_empty(), "Results must contain at least one item");
-
-	Ref<Font> font = p_tree->get_theme_font(SNAME("font"));
-	int font_size = p_tree->get_theme_font_size(SNAME("font_size"));
-
-	FindInFilesSearcher::FindResult first_result = p_results->front()->get();
-
-	int original_size = first_result.line_begin_string.size();
-	int trimmed_size = p_item->get_text(0).size();
-
-	for (const FindInFilesSearcher::FindResult &result : *p_results) {
-		int start_highlight_col = trimmed_size - original_size + result.start_col;
-		int highlight_length = result.start_line != result.end_line ? -1 : result.end_col - result.start_col;
-
-		Rect2 match_rect = p_rect;
-		match_rect.position.x += font->get_string_size(p_item->get_text(0).left(start_highlight_col), HORIZONTAL_ALIGNMENT_LEFT, -1, font_size).x + p_tree->get_theme_constant(SNAME("inner_item_margin_left"), SNAME("Tree"));
-		match_rect.size.x = font->get_string_size(p_item->get_text(0).substr(start_highlight_col, highlight_length), HORIZONTAL_ALIGNMENT_LEFT, -1, font_size).x;
-		match_rect.position.y += 1 * EDSCALE;
-		match_rect.size.y -= 2 * EDSCALE;
-
-		// Use the inverted accent color to help match rectangles stand out even on the currently selected line.
-		p_tree->draw_rect(match_rect, p_tree->get_theme_color(SNAME("accent_color"), SNAME("Editor")).inverted() * Color(1, 1, 1, 0.35f));
-	}
-
-	Size2 item_text_size = font->get_string_size(p_item->get_text(0), HORIZONTAL_ALIGNMENT_LEFT, -1, font_size);
-	const String multiple_instances_text = p_results->size() == 1 ? "" : " (x" + itos(p_results->size()) + ")";
-	const String line_text = ":" + itos(first_result.start_line + 1) + multiple_instances_text;
-	Size2 line_text_size = font->get_string_size(line_text, HORIZONTAL_ALIGNMENT_LEFT, -1, font_size);
-
-	Point2 info_string_pos = p_rect.get_position() + item_text_size;
-	info_string_pos.x += 8; // Buffer between the end of the item text and the start of the info text
-	info_string_pos.y += Math::floor((p_rect.size.y - line_text_size.y) * 0.5) - p_tree->get_theme_constant(SNAME("inner_item_margin_top")); // Center vertically
-
-	p_tree->draw_string(font, info_string_pos, line_text, HORIZONTAL_ALIGNMENT_RIGHT, -1, font_size, Color(1, 1, 1, 0.4f));
 }

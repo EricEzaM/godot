@@ -35,7 +35,9 @@
 #include "editor/editor_scale.h"
 #include "editor/editor_settings.h"
 #include "editor/find_in_files_searcher.h"
+#include "editor_string_names.h"
 #include "find_in_files_shared.h"
+#include "find_in_files_tree.h"
 #include "scene/gui/check_box.h"
 #include "scene/gui/file_dialog.h"
 #include "scene/gui/menu_button.h"
@@ -81,20 +83,20 @@ void FindInFilesDialog2::_on_match_regex_toggled(bool p_toggled_on) {
 	_run_search();
 }
 
-void FindInFilesDialog2::_update_editor() {
+void FindInFilesDialog2::_update_file_preview() {
 	const TreeItem *selected = results->get_selected();
 	if (!selected) {
 		editor_container->clear_file();
 		return;
 	}
 
-	const String id = selected->get_meta("id");
-	if (id.is_empty()) {
+	const Array &ids = selected->get_meta("ids");
+	if (ids.is_empty()) {
 		editor_container->clear_file();
 		return;
 	}
 
-	const FindInFilesSearcher::FindResult r = result_items[id];
+	const FindInFilesSearcher::FindResult r = result_items[ids.front()];
 	editor_container->open_file(r.path, r.start_line);
 }
 
@@ -104,30 +106,21 @@ void FindInFilesDialog2::_update_selected_item() {
 		return;
 	}
 
-	String id = selected->get_meta("id");
-	if (id.is_empty()) {
+	const Array &ids = selected->get_meta("ids");
+	if (ids.is_empty()) {
 		return;
 	}
 
-	FindInFilesSearcher::FindResult r = result_items[id];
+	FindInFilesSearcher::FindResult r = result_items[ids.front()];
 	if (!searcher->is_result_valid(r)) {
 		selected->set_text(0, "INVALID");
 		selected->set_custom_color(0, invalid_result_color);
 	}
 }
 
-void FindInFilesDialog2::_on_result_activated() {
-	TreeItem *selected = results->get_selected();
-	if (!selected) {
-		return;
-	}
-
-	String path = selected->get_metadata(0);
-	if (path.is_empty()) {
-		return;
-	}
-
-	ScriptEditor::get_singleton()->open_file(path, true);
+void FindInFilesDialog2::_on_open_file_requested(const String &p_path, int p_line) {
+	auto res = ScriptEditor::get_singleton()->open_file(p_path, true);
+	ScriptEditor::get_singleton()->edit(res, p_line, 0);
 	hide();
 }
 
@@ -147,11 +140,14 @@ void FindInFilesDialog2::_on_mode_changed() {
 	if (mode == REPLACE_MODE) {
 		set_title(TTR("Replace in Files"));
 		replace_dialog_btn = add_button(TTR("Replace"), true, "replace");
-		replace_all_dialog_btn = add_button(TTR("Replace All"), "replace_all");
+		replace_all_dialog_btn = add_button(TTR("Replace All"), true, "replace_all");
 		replace_hbc->show();
 		replace_preview->show();
 		replace_preview_label->show();
 	}
+
+	results->set_group_results_on_same_line(mode == FIND_MODE);
+	results->remake_tree();
 }
 
 void FindInFilesDialog2::_run_search() {
@@ -160,10 +156,8 @@ void FindInFilesDialog2::_run_search() {
 	searcher->stop();
 
 	// Clear results
-	result_items.clear();
-	results->clear();
-	results->create_item();
-	_update_editor();
+	results->reset();
+	_update_file_preview();
 
 	// Update searcher options for next search.
 	searcher->set_case_sensitive(match_case_btn->is_pressed());
@@ -204,55 +198,20 @@ void FindInFilesDialog2::_update_search_status() {
 	status_display->set_text(vformat("%s%s matches in %s%s files", status.results.size(), status.limit_reached ? "+" : "", status.files_with_matches, status.limit_reached ? "+" : ""));
 
 	if (status.results.size() == 0) {
-		_update_editor();
+		_update_file_preview();
 	}
 
 	for (const FindInFilesSearcher::FindResult &r : status.results) {
-		String result_id = vformat("%s_%s_%s_%s_%s", r.path, r.start_line, r.start_col, r.end_line, r.end_col);
-		if (result_items.has(result_id)) {
-			continue;
-		}
-
-		TreeItem *item = results->create_item();
-		// Do this first because it resets properties of the cell...
-		item->set_cell_mode(0, TreeItem::CELL_MODE_CUSTOM);
-
-		String text = r.line_begin_string;
-		text = text.strip_edges(true, false);
-		// Only draw text up to a limit to prevent slowdown due to long one-liner files.
-		if (text.size() > 150) {
-			text = text.substr(0, 150) + "...";
-		}
-
-		item->set_text(0, text);
-		item->set_custom_draw(0, this, "_draw_result_text");
-		item->set_metadata(0, r.path);
-		item->set_meta("id", result_id);
-
-		result_items[result_id] = r;
+		results->add_result(r);
+		result_items[r.id] = r;
 	}
 
 	// Select first result when it is available - do not override user selection.
-	if (!results->get_selected() && results->get_root() && results->get_root()->get_first_child()) {
-		results->get_root()->get_first_child()->select(0);
-	}
+	results->select_first_non_root();
 
 	if (status.finished) {
 		update_poll_timer->stop();
 	}
-}
-
-void FindInFilesDialog2::_draw_result_text(Object *p_item_obj, const Rect2 p_rect) {
-	TreeItem *item = Object::cast_to<TreeItem>(p_item_obj);
-	ERR_FAIL_COND_MSG(!item, "Item must be a TreeItem for custom draw.");
-
-	const String id = item->get_meta("id", "");
-	ERR_FAIL_COND_MSG(id.is_empty(), "TreeItem must have meta 'id' set for custom draw.");
-
-	HashMap<String, FindInFilesSearcher::FindResult>::Iterator E = result_items.find(id);
-	ERR_FAIL_COND_MSG(!E, "Result item could not be found for TreeItem id.");
-
-	// draw_find_result_tree_item(results, item, p_rect, E->value);
 }
 
 void FindInFilesDialog2::_save_recent_filters(bool p_save_to_editor_cfg) {
@@ -326,18 +285,18 @@ void FindInFilesDialog2::_update_recent_filters_menu() {
 }
 
 void FindInFilesDialog2::_do_replace_on_selected() {
-	const TreeItem *selected = results->get_selected();
-	ERR_FAIL_COND_MSG(!selected, "Can't perform replace - nothing selected.");
-
-	String id = selected->get_meta("id");
-	ERR_FAIL_COND_MSG(id.is_empty(), "Can't perform replace - selected does not have ID metadata");
-
-	FindInFilesSearcher::FindResult result = result_items[id];
-	if (searcher->replace_match(result, replace_line_edit->get_text())) {
-		_update_editor();
-		_update_selected_item();
-		ScriptEditor::get_singleton()->reload_scripts();
-	}
+	// const TreeItem *selected = results->get_selected();
+	// ERR_FAIL_COND_MSG(!selected, "Can't perform replace - nothing selected.");
+	//
+	// const String id = selected->get_meta("id");
+	// ERR_FAIL_COND_MSG(id.is_empty(), "Can't perform replace - selected does not have ID metadata");
+	//
+	// FindInFilesSearcher::FindResult result = result_items[id];
+	// if (searcher->replace_match(result, replace_line_edit->get_text())) {
+	// 	_update_file_preview();
+	// 	_update_selected_item();
+	// 	ScriptEditor::get_singleton()->reload_scripts();
+	// }
 }
 
 void FindInFilesDialog2::_do_replace_all() {
@@ -345,16 +304,16 @@ void FindInFilesDialog2::_do_replace_all() {
 }
 
 void FindInFilesDialog2::_update_replace_preview() {
-	const TreeItem *selected = results->get_selected();
-	ERR_FAIL_COND_MSG(!selected, "Can't perform replace - nothing selected.");
-
-	String id = selected->get_meta("id");
-	ERR_FAIL_COND_MSG(id.is_empty(), "Can't perform replace - selected does not have ID metadata");
-
-	FindInFilesSearcher::FindResult result = result_items[id];
-	const String preview = searcher->get_replace_match_preview(result, replace_line_edit->get_text());
-
-	replace_preview->set_text(preview);
+	// const TreeItem *selected = results->get_selected();
+	// ERR_FAIL_COND_MSG(!selected, "Can't update replace preview - nothing selected.");
+	//
+	// const Variant id = selected->get_meta("id");
+	// ERR_FAIL_COND_MSG(!id.is_string(), "Can't update replace preview - selected does not have ID metadata");
+	//
+	// FindInFilesSearcher::FindResult result = result_items[id];
+	// const String preview = searcher->get_replace_match_preview(result, replace_line_edit->get_text());
+	//
+	// replace_preview->set_text(preview);
 }
 
 void FindInFilesDialog2::_notification(int p_what) {
@@ -378,22 +337,18 @@ void FindInFilesDialog2::_notification(int p_what) {
 		} break;
 		case NOTIFICATION_READY:
 		case NOTIFICATION_THEME_CHANGED: {
-			invalid_result_color = get_theme_color(SNAME("error_color"), SNAME("Editor"));
-			match_case_btn->set_icon(get_theme_icon(SNAME("MatchCase"), SNAME("EditorIcons")));
-			match_word_btn->set_icon(get_theme_icon(SNAME("MatchWord"), SNAME("EditorIcons")));
-			match_regex_btn->set_icon(get_theme_icon(SNAME("MatchRegex"), SNAME("EditorIcons")));
+			invalid_result_color = get_theme_color(SNAME("error_color"), EditorStringName(Editor));
+			match_case_btn->set_icon(get_theme_icon(SNAME("MatchCase"), EditorStringName(EditorIcons)));
+			match_word_btn->set_icon(get_theme_icon(SNAME("MatchWord"), EditorStringName(EditorIcons)));
+			match_regex_btn->set_icon(get_theme_icon(SNAME("MatchRegex"), EditorStringName(EditorIcons)));
 
-			status_display->add_theme_font_override("font", get_theme_font(SNAME("bold"), SNAME("EditorFonts")));
-			search_validation->set_texture(get_theme_icon("StatusError", "EditorIcons"));
+			status_display->add_theme_font_override("font", get_theme_font(SNAME("bold"), EditorStringName(EditorFonts)));
+			search_validation->set_texture(get_theme_icon("StatusError", EditorStringName(EditorIcons)));
 
-			results->add_theme_font_override("font", EditorNode::get_singleton()->get_gui_base()->get_theme_font(SNAME("source"), SNAME("EditorFonts")));
-			results->add_theme_font_size_override("font_size", EditorNode::get_singleton()->get_gui_base()->get_theme_font_size(SNAME("source_size"), SNAME("EditorFonts")));
+			results->add_theme_font_override("font", EditorNode::get_singleton()->get_gui_base()->get_theme_font(SNAME("source"), EditorStringName(EditorFonts)));
+			results->add_theme_font_size_override("font_size", EditorNode::get_singleton()->get_gui_base()->get_theme_font_size(SNAME("source_size"), EditorStringName(EditorFonts)));
 		} break;
 	}
-}
-
-void FindInFilesDialog2::_bind_methods() {
-	ClassDB::bind_method("_draw_result_text", &FindInFilesDialog2::_draw_result_text);
 }
 
 void FindInFilesDialog2::custom_action(const String &p_string) {
@@ -581,17 +536,14 @@ FindInFilesDialog2::FindInFilesDialog2() {
 	split->set_v_size_flags(Control::SIZE_EXPAND_FILL);
 	main_vbc->add_child(split);
 
-	results = memnew(Tree);
+	results = memnew(FindInFilesTree(true));
 	results->set_stretch_ratio(0.75);
-	results->set_v_size_flags(Control::SIZE_EXPAND_FILL);
-	results->connect(SNAME("item_selected"), callable_mp(this, &FindInFilesDialog2::_update_editor));
+	results->set_group_results_on_same_line(true);
+	results->connect(SNAME("item_selected"), callable_mp(this, &FindInFilesDialog2::_update_file_preview));
 	results->connect(SNAME("item_selected"), callable_mp(this, &FindInFilesDialog2::_update_replace_preview));
-	results->connect(SNAME("item_activated"), callable_mp(this, &FindInFilesDialog2::_on_result_activated));
-	results->set_hide_root(true);
-	results->set_select_mode(Tree::SELECT_ROW);
-	results->set_allow_rmb_select(true);
+	results->connect(SNAME("open_file_requested"), callable_mp(this, &FindInFilesDialog2::_on_open_file_requested));
 	split->add_child(results);
 
-	editor_container = memnew(FindInFilesEditor);
+	editor_container = memnew(FindInFilesFilePreview);
 	split->add_child(editor_container);
 }
