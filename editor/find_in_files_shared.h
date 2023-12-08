@@ -67,6 +67,4 @@ public:
 	~FindInFilesFilePreview();
 };
 
-void _draw_find_result_tree_item(Tree *p_tree, const TreeItem *p_item, Rect2 p_rect, List<FindInFilesSearcher::FindResult> *p_results);
-
 #endif // FIND_IN_FILES_SHARED_H
