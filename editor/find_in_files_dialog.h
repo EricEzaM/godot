@@ -72,7 +72,7 @@ class FindInFilesDialog2 : public AcceptDialog {
 	Label *replace_preview;
 
 	FindInFilesTree *results;
-	FindInFilesFilePreview *editor_container;
+	FindInFilesFilePreview *file_preview;
 	Color invalid_result_color = Color(1, 0, 0);
 
 	Timer *update_poll_timer;
@@ -93,7 +93,7 @@ class FindInFilesDialog2 : public AcceptDialog {
 
 	void _update_file_preview();
 	void _update_selected_item();
-	void _on_open_file_requested(const String &p_path, int p_line);
+	void _on_open_file_requested(const String &p_path, int p_line, int p_column);
 
 	void _on_mode_changed();
 

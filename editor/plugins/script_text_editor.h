@@ -229,7 +229,7 @@ public:
 	virtual void convert_indent() override;
 	virtual void tag_saved_version() override;
 
-	virtual void goto_line(int p_line, bool p_with_error = false) override;
+	virtual void goto_line(int p_line) override;
 	void goto_line_selection(int p_line, int p_begin, int p_end);
 	virtual void goto_line_centered(int p_line) override;
 	virtual void set_executing_line(int p_line) override;

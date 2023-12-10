@@ -86,18 +86,18 @@ void FindInFilesDialog2::_on_match_regex_toggled(bool p_toggled_on) {
 void FindInFilesDialog2::_update_file_preview() {
 	const TreeItem *selected = results->get_selected();
 	if (!selected) {
-		editor_container->clear_file();
+		file_preview->clear_file();
 		return;
 	}
 
 	const Array &ids = selected->get_meta("ids");
 	if (ids.is_empty()) {
-		editor_container->clear_file();
+		file_preview->clear_file();
 		return;
 	}
 
 	const FindInFilesSearcher::FindResult r = result_items[ids.front()];
-	editor_container->open_file(r.path, r.start_line);
+	file_preview->open_file(r.path, r.start_line);
 }
 
 void FindInFilesDialog2::_update_selected_item() {
@@ -118,9 +118,9 @@ void FindInFilesDialog2::_update_selected_item() {
 	}
 }
 
-void FindInFilesDialog2::_on_open_file_requested(const String &p_path, int p_line) {
+void FindInFilesDialog2::_on_open_file_requested(const String &p_path, int p_line, int p_column) {
 	auto res = ScriptEditor::get_singleton()->open_file(p_path, true);
-	ScriptEditor::get_singleton()->edit(res, p_line, 0);
+	ScriptEditor::get_singleton()->edit(res, p_line, p_column);
 	hide();
 }
 
@@ -364,7 +364,6 @@ void FindInFilesDialog2::custom_action(const String &p_string) {
 
 void FindInFilesDialog2::ok_pressed() {
 	FindInFilesPanel2::get_singleton()->add_search(searcher->create_input_data());
-	EditorNode::get_singleton()->make_bottom_panel_item_visible(FindInFilesPanel2::get_singleton());
 }
 
 void FindInFilesDialog2::shortcut_input(const Ref<InputEvent> &p_event) {
@@ -544,6 +543,6 @@ FindInFilesDialog2::FindInFilesDialog2() {
 	results->connect(SNAME("open_file_requested"), callable_mp(this, &FindInFilesDialog2::_on_open_file_requested));
 	split->add_child(results);
 
-	editor_container = memnew(FindInFilesFilePreview);
-	split->add_child(editor_container);
+	file_preview = memnew(FindInFilesFilePreview);
+	split->add_child(file_preview);
 }

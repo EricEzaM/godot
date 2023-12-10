@@ -47,7 +47,6 @@ class Tree;
 
 class FindInFilesPanelTab : public Control {
 	GDCLASS(FindInFilesPanelTab, Control)
-
 	Ref<Texture2D> file_icon;
 	Ref<Texture2D> folder_icon;
 	Color folder_icon_color;
@@ -62,11 +61,11 @@ class FindInFilesPanelTab : public Control {
 	Label *status_display;
 
 	FindInFilesTree *results;
-	FindInFilesFilePreview *editor_panel;
+	FindInFilesFilePreview *file_preview;
 
 	ConfirmationDialog *continue_confirm_dialog;
 
-	void _on_open_file_requested(const String &p_path, int p_line);
+	void _on_open_file_requested(const String &p_path, int p_line, int p_column);
 
 	void _reset();
 	void _update_search_status();
@@ -88,9 +87,10 @@ public:
 };
 
 class FindInFilesPanel2 : public Control {
-	GDCLASS(FindInFilesPanel2, Control);
-
+	GDCLASS(FindInFilesPanel2, Control)
 	static FindInFilesPanel2 *singleton;
+
+	bool has_editor_panel = false;
 
 	TabContainer *tabs;
 
@@ -101,14 +101,19 @@ class FindInFilesPanel2 : public Control {
 	Button *show_source_btn;
 
 	void _on_tab_changed(int p_new_tab);
-	void _on_tab_button_pressed(int p_tab);
+	void _on_tab_closed(int p_tab);
 	void _expand_collapse_tree(bool p_collapse);
 
 protected:
 	void _notification(int p_what);
 
 public:
-	static FindInFilesPanel2 *FindInFilesPanel2::get_singleton() { return singleton; }
+	static FindInFilesPanel2 *get_singleton() {
+		if (!singleton) {
+			singleton = memnew(FindInFilesPanel2);
+		}
+		return singleton;
+	}
 
 	void add_search(FindInFilesSearcher::SearchInputData p_input_data);
 

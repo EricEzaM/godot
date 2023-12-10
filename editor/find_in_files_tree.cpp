@@ -33,6 +33,7 @@
 #include "editor_scale.h"
 #include "editor_string_names.h"
 #include "find_in_files_shared.h"
+#include "scene/theme/theme_db.h"
 
 void FindInFilesTree::_notification(int p_what) {
 	switch (p_what) {
@@ -116,20 +117,39 @@ void FindInFilesTree::_create_result_item(const FindInFilesSearcher::FindResult 
 	item->set_cell_mode(0, TreeItem::CELL_MODE_CUSTOM);
 
 	String text = p_result.line_begin_string;
-	text = text.strip_edges(true, false);
-	// Only draw text up to a limit to prevent slowdown due to long one-liner files.
-	if (text.size() > 150) {
-		text = text.substr(0, 150) + "...";
+	const String trimmed_text = text.strip_edges(true, false);
+
+	text = trimmed_text;
+	int text_start_column = 0;
+	// Only draw text up to a limit to prevent long horizontal scrolling or slowdown due to long lines.
+	// Ensure that the result is still shown even if it occurs at the end of a very long line.
+	if (p_result.start_col > item_character_limit / 2) {
+		text = text.substr(p_result.start_col - item_character_limit / 2);
+		if (text.size() > item_character_limit) {
+			text = text.substr(0, item_character_limit) + "...";
+		}
+		text_start_column = p_result.start_col - item_character_limit / 2;
+	} else if (text.size() > item_character_limit) {
+		text = text.substr(0, item_character_limit) + "...";
 	}
 
 	item->set_text(0, text);
+	if (dialog_mode) {
+		item->set_custom_font_size(1, get_theme_font_size(SNAME("font_size")) * 0.8);
+		item->set_custom_color(1, secondary_font_color);
+		item->set_text(1, p_result.path.get_file());
+		item->set_text_alignment(1, HORIZONTAL_ALIGNMENT_RIGHT);
+	}
 	item->set_metadata(0, p_result.path);
 
 	Array ids = Array();
 	ids.push_back(p_result_id);
 	item->set_meta("ids", ids);
+	item->set_meta("trim_count", p_result.line_begin_string.size() - trimmed_text.size());
+	item->set_meta("display_text_start_column", text_start_column);
 	item->set_meta("path", p_result.path);
 	item->set_meta("line", p_result.start_line);
+	item->set_meta("column", p_result.start_col);
 	item->set_custom_draw(0, this, "_draw_result_text");
 }
 
@@ -203,11 +223,10 @@ void FindInFilesTree::_draw_find_result_tree_item(const TreeItem *p_item, Rect2 
 
 	FindInFilesSearcher::FindResult first_result = p_results->front()->get();
 
-	int original_size = first_result.line_begin_string.size();
-	int trimmed_size = p_item->get_text(0).size();
+	int trim_count = p_item->get_meta("trim_count");
 
 	for (const FindInFilesSearcher::FindResult &result : *p_results) {
-		int start_highlight_col = trimmed_size - original_size + result.start_col;
+		int start_highlight_col = -1 * trim_count + result.start_col - (int)p_item->get_meta("display_text_start_column");
 		int highlight_length = result.start_line != result.end_line ? -1 : result.end_col - result.start_col;
 
 		Rect2 match_rect = p_rect;
@@ -217,7 +236,7 @@ void FindInFilesTree::_draw_find_result_tree_item(const TreeItem *p_item, Rect2 
 		match_rect.size.y -= 2 * EDSCALE;
 
 		// Use the inverted accent color to help match rectangles stand out even on the currently selected line.
-		draw_rect(match_rect, get_theme_color(SNAME("accent_color"), SNAME("Editor")) /*.inverted()*/ * Color(1, 1, 1, 0.35f));
+		draw_rect(match_rect, get_theme_color(SNAME("accent_color"), SNAME("Editor")) * Color(1, 1, 1, 0.35f));
 	}
 
 	if (dialog_mode) {
@@ -233,7 +252,7 @@ void FindInFilesTree::_draw_find_result_tree_item(const TreeItem *p_item, Rect2 
 		info_string_pos.x += 8; // Buffer between the end of the item text and the start of the info text
 		info_string_pos.y += Math::floor((p_rect.size.y - line_text_size.y) * 0.5) - get_theme_constant(SNAME("inner_item_margin_top")); // Center vertically
 
-		draw_string(font, info_string_pos, line_text, HORIZONTAL_ALIGNMENT_RIGHT, -1, font_size, Color(1, 1, 1, 0.4f));
+		draw_string(font, info_string_pos, line_text, HORIZONTAL_ALIGNMENT_RIGHT, -1, font_size, secondary_font_color);
 	}
 }
 
@@ -243,7 +262,7 @@ void FindInFilesTree::_on_result_activated() {
 		return;
 	}
 
-	Variant path = selected->get_metadata(0);
+	const Variant path = selected->get_metadata(0);
 	if (!path.is_string() || ((String)path).is_empty()) {
 		selected->set_collapsed(!selected->is_collapsed());
 		return;
@@ -253,9 +272,9 @@ void FindInFilesTree::_on_result_activated() {
 		return;
 	}
 
-	int line = (int)selected->get_meta("line");
-
-	emit_signal("open_file_requested", path, line);
+	const int line = selected->get_meta("line");
+	const int column = selected->get_meta("column");
+	emit_signal("open_file_requested", path, line, column);
 }
 
 void FindInFilesTree::reset() {
@@ -266,19 +285,22 @@ void FindInFilesTree::reset() {
 }
 
 void FindInFilesTree::_remake_empty_tree_structure() {
-	String previousRootText = "";
+	String previous_root_text = "";
 	if (get_root()) {
-		previousRootText = get_root()->get_text(0);
+		previous_root_text = get_root()->get_text(0);
 	}
 
 	clear();
 	create_item();
-	get_root()->set_text(0, previousRootText);
+	get_root()->set_text(0, previous_root_text);
 	get_root()->set_icon(0, folder_icon);
 }
 
 FindInFilesTree::FindInFilesTree(bool p_dialog_mode) {
 	dialog_mode = p_dialog_mode;
+	if (dialog_mode) {
+		set_columns(2);
+	}
 
 	set_hide_root(p_dialog_mode);
 

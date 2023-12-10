@@ -42,9 +42,9 @@
 
 FindInFilesPanel2 *FindInFilesPanel2::singleton = nullptr;
 
-void FindInFilesPanelTab::_on_open_file_requested(const String &p_path, int p_line) {
+void FindInFilesPanelTab::_on_open_file_requested(const String &p_path, int p_line, int p_column) {
 	auto res = ScriptEditor::get_singleton()->open_file(p_path, true);
-	ScriptEditor::get_singleton()->edit(res, p_line, 0);
+	ScriptEditor::get_singleton()->edit(res, p_line, p_column);
 }
 
 void FindInFilesPanelTab::_reset() {
@@ -54,19 +54,9 @@ void FindInFilesPanelTab::_reset() {
 	result_filesystem_levels.clear();
 }
 
-// TODO can this be shared between dialog and parent?
 void FindInFilesPanelTab::_update_search_status() {
-	// TODO ensure this can only be entered once. Do an if(processing) or something
-	// Also do it for the dialog
-
-	auto status = searcher->get_status();
-	// status_display->set_text(vformat("%s%s matches in %s%s files", status.results.size(), status.limit_reached ? "+" : "", status.files_with_matches, status.limit_reached ? "+" : ""));
-
-	if (status.results.size() == 0) {
-		// _update_mini_editor();
-	}
-
-	results->get_root()->set_text(0, vformat("%s results", status.results.size()));
+	FindInFilesSearcher::FindInFilesStatus status = searcher->get_status();
+	results->get_root()->set_text(0, vformat(TTR("%s results"), status.results.size()));
 
 	for (const FindInFilesSearcher::FindResult &result : status.results) {
 		results->add_result(result);
@@ -99,13 +89,13 @@ void FindInFilesPanelTab::_update_searcher(FindInFilesSearcher::SearchInputData 
 void FindInFilesPanelTab::_update_file_preview() {
 	const TreeItem *selected = results->get_selected();
 	if (!selected) {
-		editor_panel->clear_file();
+		file_preview->clear_file();
 		return;
 	}
 
 	const Array ids = selected->get_meta("ids", Array());
 	if (ids.is_empty()) {
-		editor_panel->clear_file();
+		file_preview->clear_file();
 		return;
 	}
 
@@ -113,9 +103,9 @@ void FindInFilesPanelTab::_update_file_preview() {
 	const String id = ids.front();
 	if (result_items.has(id)) {
 		const FindInFilesSearcher::FindResult r = result_items[id];
-		editor_panel->open_file(r.path, r.start_line);
+		file_preview->open_file(r.path, r.start_line);
 	} else {
-		editor_panel->clear_file();
+		file_preview->clear_file();
 	}
 }
 
@@ -128,6 +118,9 @@ void FindInFilesPanelTab::_soft_limit_cancel_search() {
 	searcher->release_soft_limit(false);
 	update_poll_timer->stop();
 	searcher->stop();
+
+	FindInFilesSearcher::FindInFilesStatus status = searcher->get_status();
+	results->get_root()->set_text(0, vformat(TTR("%s+ results (search was stopped early)"), status.results.size()));
 }
 
 void FindInFilesPanelTab::_notification(int p_what) {
@@ -183,14 +176,14 @@ FindInFilesPanelTab::FindInFilesPanelTab(FindInFilesSearcher::SearchInputData p_
 
 	results = memnew(FindInFilesTree(false));
 	results->set_stretch_ratio(0.5);
-	results->set_group_results_on_same_line(false);
+	results->set_group_results_on_same_line(true);
 	results->connect(SNAME("item_selected"), callable_mp(this, &FindInFilesPanelTab::_update_file_preview));
 	// results->connect(SNAME("item_selected"), callable_mp(this, &FindInFilesPanelTab::_update_replace_preview));
 	results->connect(SNAME("open_file_requested"), callable_mp(this, &FindInFilesPanelTab::_on_open_file_requested));
 	split->add_child(results);
 
-	editor_panel = memnew(FindInFilesFilePreview);
-	split->add_child(editor_panel);
+	file_preview = memnew(FindInFilesFilePreview);
+	split->add_child(file_preview);
 
 	continue_confirm_dialog = memnew(ConfirmationDialog);
 	add_child(continue_confirm_dialog);
@@ -200,7 +193,7 @@ FindInFilesPanelTab::FindInFilesPanelTab(FindInFilesSearcher::SearchInputData p_
 }
 
 FindInFilesPanelTab::~FindInFilesPanelTab() {
-	editor_panel->queue_free();
+	file_preview->queue_free();
 	continue_confirm_dialog->queue_free();
 	// status_display->queue_free();
 	results->queue_free();
@@ -217,19 +210,22 @@ void FindInFilesPanel2::_on_tab_changed(int p_new_tab) {
 	ERR_FAIL_NULL_MSG(tab, "Tab of find in files panel is of incorrect type");
 }
 
-void FindInFilesPanel2::_on_tab_button_pressed(int p_tab) {
+void FindInFilesPanel2::_on_tab_closed(int p_tab) {
 	Control *current = tabs->get_tab_control(p_tab);
 	if (!current) {
 		return;
 	}
+
 	FindInFilesPanelTab *tab = cast_to<FindInFilesPanelTab>(current);
 	ERR_FAIL_NULL_MSG(tab, "Tab of find in files panel is of incorrect type");
 
 	tabs->remove_child(tab);
 	tab->queue_free();
 
-	if (tabs->get_tab_count() == 0) {
-		EditorNode::get_singleton()->hide_bottom_panel();
+	// Remove the bottom panel tab when the last search is closed
+	if (tabs->get_tab_count() == 0 && has_editor_panel) {
+		EditorNode::get_singleton()->remove_bottom_panel_item(this);
+		has_editor_panel = false;
 	}
 }
 
@@ -262,6 +258,13 @@ void FindInFilesPanel2::_notification(int p_what) {
 }
 
 void FindInFilesPanel2::add_search(FindInFilesSearcher::SearchInputData p_input_data) {
+	if (!has_editor_panel) {
+		EditorNode::get_singleton()->add_bottom_panel_item(TTR("Search Results"), get_singleton());
+		has_editor_panel = true;
+	}
+
+	EditorNode::get_singleton()->make_bottom_panel_item_visible(get_singleton());
+
 	FindInFilesPanelTab *child = memnew(FindInFilesPanelTab(p_input_data));
 	tabs->add_child(child);
 	tabs->set_tab_title(tabs->get_tab_count() - 1, vformat("Find '%s'", p_input_data.text));
@@ -270,6 +273,7 @@ void FindInFilesPanel2::add_search(FindInFilesSearcher::SearchInputData p_input_
 }
 
 FindInFilesPanel2::FindInFilesPanel2() {
+	ERR_FAIL_COND(singleton != nullptr);
 	singleton = this;
 
 	set_custom_minimum_size(Size2(0, 200) * EDSCALE);
@@ -314,7 +318,7 @@ FindInFilesPanel2::FindInFilesPanel2() {
 	tabs->set_anchors_and_offsets_preset(PRESET_FULL_RECT);
 	tabs->set_v_size_flags(SIZE_EXPAND_FILL);
 	tabs->set_h_size_flags(SIZE_EXPAND_FILL);
-	tabs->connect(SNAME("tab_button_pressed"), callable_mp(this, &FindInFilesPanel2::_on_tab_button_pressed));
+	tabs->connect(SNAME("tab_button_pressed"), callable_mp(this, &FindInFilesPanel2::_on_tab_closed));
 	tabs->connect(SNAME("tab_changed"), callable_mp(this, &FindInFilesPanel2::_on_tab_changed));
 
 	main_hbox->add_child(tabs);

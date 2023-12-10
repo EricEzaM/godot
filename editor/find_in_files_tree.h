@@ -37,9 +37,14 @@
 
 class FindInFilesTree : public Tree {
 	GDCLASS(FindInFilesTree, Tree)
+
+	int item_character_limit = 100;
+
 	Ref<Texture2D> file_icon;
 	Ref<Texture2D> folder_icon;
 	Color folder_icon_color;
+
+	Color secondary_font_color = Color(1, 1, 1, 0.4f);
 
 	bool dialog_mode = false;
 	bool group_results_on_same_line = false;

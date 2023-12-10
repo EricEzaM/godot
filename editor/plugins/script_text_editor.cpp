@@ -424,7 +424,7 @@ void ScriptTextEditor::tag_saved_version() {
 	code_editor->get_text_editor()->tag_saved_version();
 }
 
-void ScriptTextEditor::goto_line(int p_line, bool p_with_error) {
+void ScriptTextEditor::goto_line(int p_line) {
 	code_editor->goto_line(p_line);
 }
 
