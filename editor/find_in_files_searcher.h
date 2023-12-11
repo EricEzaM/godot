@@ -42,6 +42,7 @@ class ClassDB;
 class FindInFilesSearcher : public Object {
 	GDCLASS(FindInFilesSearcher, Object)
 	_THREAD_SAFE_CLASS_
+
 public:
 	struct FindResult {
 		String id = "";
@@ -82,19 +83,20 @@ public:
 		}
 	};
 
-	struct FindInFilesStatus {
+	struct Status {
 		bool finished = false;
 		int files_searched = 0;
 		int files_with_matches = 0;
 		bool limit_reached = false;
 		bool soft_limit = false;
-		Vector<FindResult> results = Vector<FindResult>();
+		Vector<FindResult> results;
 	};
 
-	struct SearchInputData {
+	struct InputData {
 		String text;
 		String directory;
 
+		String file_filter_string;
 		HashSet<String> allow_file_regex_strings;
 		HashSet<String> ignore_file_regex_strings;
 
@@ -104,10 +106,13 @@ public:
 		bool match_whole_words;
 		bool match_use_regex;
 
-		SearchInputData(const String &p_text, const String &p_directory, const HashSet<String> &p_allow_file_regex_strings, const HashSet<String> &p_ignore_file_regex_strings,
+		InputData() {}
+
+		InputData(const String &p_text, const String &p_directory, const String &p_file_filter, const HashSet<String> &p_allow_file_regex_strings, const HashSet<String> &p_ignore_file_regex_strings,
 				int p_result_limit, bool p_soft_limit, bool p_case_sensitive, bool p_whole_words, bool p_use_regex) :
 				text(p_text),
 				directory(p_directory),
+				file_filter_string(p_file_filter),
 				allow_file_regex_strings(p_allow_file_regex_strings),
 				ignore_file_regex_strings(p_ignore_file_regex_strings),
 				result_limit(p_result_limit),
@@ -121,7 +126,7 @@ public:
 private:
 	bool is_cancelled;
 
-	FindInFilesStatus status;
+	Status status;
 	Thread worker_thread;
 
 	String text;
@@ -133,6 +138,7 @@ private:
 	bool match_whole_words;
 	bool match_use_regex;
 
+	String file_filter_string;
 	HashSet<String> allow_regex_strings;
 	HashSet<String> ignore_regex_strings;
 
@@ -161,9 +167,11 @@ protected:
 public:
 	// Batch input data as one structure, so that changes to any options only affect new searches,
 	// not ongoing ones (if the user of this class does not immediately restart the search).
-	SearchInputData create_input_data() const;
+	InputData get_input_data() const;
+	void set_input_data(const InputData &p_input_data);
 
-	FindInFilesStatus get_status() const;
+	Status get_status() const;
+	void set_status(const Status &p_status);
 
 	String get_replace_match_preview(const FindResult &p_result, const String &p_replacement) const;
 	bool replace_match(const FindResult &p_result, const String &p_replacement) const;

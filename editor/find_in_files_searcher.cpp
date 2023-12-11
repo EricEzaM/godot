@@ -42,7 +42,7 @@ void FindInFilesSearcher::_thread_func(void *self) {
 }
 
 void FindInFilesSearcher::_thread_process() {
-	SearchInputData input = create_input_data();
+	InputData input = get_input_data();
 	PackedStringArray filepaths;
 
 	Vector<Ref<RegEx>> allow_regexs;
@@ -107,7 +107,7 @@ void FindInFilesSearcher::_thread_process() {
 		}
 
 		_update_status(false, searched, searched_with_matches, limit_reached, input.soft_limit, results);
-		OS::get_singleton()->delay_usec(15000);
+		// OS::get_singleton()->delay_usec(15000);
 	}
 
 	_update_status(true, searched, searched_with_matches, limit_reached, input.soft_limit, results);
@@ -238,7 +238,9 @@ void FindInFilesSearcher::_update_status(bool p_finished, int p_files_searched, 
 	status.files_with_matches = p_files_with_matches;
 	status.limit_reached = p_limit_reached;
 	status.soft_limit = p_soft_limit;
-	status.results = p_results;
+
+	status.results.clear();
+	status.results.append_array(p_results);
 }
 
 bool FindInFilesSearcher::_is_cancelled() const {
@@ -251,11 +253,12 @@ void FindInFilesSearcher::_set_cancelled(bool p_cancelled) {
 	is_cancelled = p_cancelled;
 }
 
-FindInFilesSearcher::SearchInputData FindInFilesSearcher::create_input_data() const {
+FindInFilesSearcher::InputData FindInFilesSearcher::get_input_data() const {
 	_THREAD_SAFE_METHOD_
-	return SearchInputData(
+	return InputData(
 			text,
 			directory,
+			file_filter_string,
 			allow_regex_strings,
 			ignore_regex_strings,
 			result_limit,
@@ -263,6 +266,20 @@ FindInFilesSearcher::SearchInputData FindInFilesSearcher::create_input_data() co
 			match_case_sensitive,
 			match_whole_words,
 			match_use_regex);
+}
+
+void FindInFilesSearcher::set_input_data(const InputData &p_input_data) {
+	_THREAD_SAFE_METHOD_
+	text = p_input_data.text;
+	directory = p_input_data.directory;
+	file_filter_string = p_input_data.file_filter_string;
+	allow_regex_strings = p_input_data.allow_file_regex_strings;
+	ignore_regex_strings = p_input_data.ignore_file_regex_strings;
+	result_limit = p_input_data.result_limit;
+	soft_result_limit = p_input_data.soft_limit;
+	match_case_sensitive = p_input_data.match_case_sensitive;
+	match_whole_words = p_input_data.match_whole_words;
+	match_use_regex = p_input_data.match_use_regex;
 }
 
 bool FindInFilesSearcher::_is_result_valid(const FindResult &p_result, const Ref<RegEx> &p_regex) const {
@@ -341,9 +358,13 @@ Ref<RegEx> FindInFilesSearcher::_get_regex(const String &p_text, bool p_text_is_
 void FindInFilesSearcher::_bind_methods() {
 }
 
-FindInFilesSearcher::FindInFilesStatus FindInFilesSearcher::get_status() const {
+FindInFilesSearcher::Status FindInFilesSearcher::get_status() const {
 	_THREAD_SAFE_METHOD_
 	return status;
+}
+
+void FindInFilesSearcher::set_status(const Status &p_status) {
+	status = p_status;
 }
 
 String FindInFilesSearcher::get_replace_match_preview(const FindResult &p_result, const String &p_replacement) const {
@@ -381,12 +402,12 @@ bool FindInFilesSearcher::replace_match(const FindResult &p_result, const String
 	// Result is still valid, let's replace.
 	Ref<FileAccess> f = FileAccess::open(p_result.path, FileAccess::READ);
 	ERR_FAIL_COND_V_MSG(f.is_null(), false, vformat("Cannot open file from path '%s' for reading.", p_result.path));
-	const String text = f->get_as_text(true);
+	const String file_text = f->get_as_text(true);
 	f = nullptr;
 
-	const String new_text = regex->sub(text, p_replacement, false, p_result.start_in_file);
+	const String new_text = regex->sub(file_text, p_replacement, false, p_result.start_in_file);
 	// Technically not always a failure, but this is necessary in case the sub fails
-	ERR_FAIL_COND_V_MSG(new_text.is_empty(), false, vformat("Repalce failed on path '%s' because resulting file would be empty (likely due to RegEx replacement error)", p_result.path));
+	ERR_FAIL_COND_V_MSG(new_text.is_empty(), false, vformat("Replace failed on path '%s' because resulting file would be empty (likely due to RegEx replacement error)", p_result.path));
 
 	f = FileAccess::open(p_result.path, FileAccess::WRITE);
 	ERR_FAIL_COND_V_MSG(f.is_null(), false, vformat("Cannot open file from path '%s' for writing.", p_result.path));
@@ -404,7 +425,7 @@ void FindInFilesSearcher::start() {
 	_THREAD_SAFE_METHOD_
 	soft_limit_continue = false;
 	is_cancelled = false;
-	status = FindInFilesStatus();
+	status = Status();
 
 	worker_thread.start(_thread_func, this);
 }
@@ -458,6 +479,8 @@ void FindInFilesSearcher::set_directory(const String &p_directory) {
 
 void FindInFilesSearcher::set_file_filter(const String &p_file_filter) {
 	_THREAD_SAFE_METHOD_
+
+	file_filter_string = p_file_filter;
 	allow_regex_strings.clear();
 	ignore_regex_strings.clear();
 
@@ -520,9 +543,19 @@ void FindInFilesSearcher::set_whole_words(bool p_whole_words) {
 	match_whole_words = p_whole_words;
 }
 
+bool FindInFilesSearcher::is_whole_words() const {
+	_THREAD_SAFE_METHOD_
+	return match_whole_words;
+}
+
 void FindInFilesSearcher::set_use_regex(bool p_use_regex) {
 	_THREAD_SAFE_METHOD_
 	match_use_regex = p_use_regex;
+}
+
+bool FindInFilesSearcher::is_using_regex() const {
+	_THREAD_SAFE_METHOD_
+	return match_use_regex;
 }
 
 void FindInFilesSearcher::release_soft_limit(bool p_continue_search) {

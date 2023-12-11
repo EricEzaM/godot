@@ -32,6 +32,7 @@
 
 #include "editor/editor_node.h"
 #include "editor/editor_scale.h"
+#include "find_in_files_dialog.h"
 #include "find_in_files_shared.h"
 #include "find_in_files_tree.h"
 #include "plugins/script_editor_plugin.h"
@@ -40,22 +41,28 @@
 #include "scene/gui/tab_container.h"
 #include "scene/gui/tree.h"
 
-FindInFilesPanel2 *FindInFilesPanel2::singleton = nullptr;
+void FindInFilesPanelTab::_on_dialog_confirmed() {
+	if (!dialog->get_has_changed()) {
+		return;
+	}
+
+	FindInFilesSearcher::InputData input;
+	FindInFilesSearcher::Status status;
+	dialog->get_initial_search_data(input, status);
+	searcher->set_input_data(input);
+	// TODO result limit is also in ctor
+	searcher->set_result_limit(1000, true);
+
+	_run_search();
+}
 
 void FindInFilesPanelTab::_on_open_file_requested(const String &p_path, int p_line, int p_column) {
 	auto res = ScriptEditor::get_singleton()->open_file(p_path, true);
 	ScriptEditor::get_singleton()->edit(res, p_line, p_column);
 }
 
-void FindInFilesPanelTab::_reset() {
-	// TODO results tree .reset()
-
-	result_items.clear();
-	result_filesystem_levels.clear();
-}
-
-void FindInFilesPanelTab::_update_search_status() {
-	FindInFilesSearcher::FindInFilesStatus status = searcher->get_status();
+void FindInFilesPanelTab::_update_from_searcher() {
+	FindInFilesSearcher::Status status = searcher->get_status();
 	results->get_root()->set_text(0, vformat(TTR("%s results"), status.results.size()));
 
 	for (const FindInFilesSearcher::FindResult &result : status.results) {
@@ -75,15 +82,6 @@ void FindInFilesPanelTab::_update_search_status() {
 	if (status.finished) {
 		update_poll_timer->stop();
 	}
-}
-
-void FindInFilesPanelTab::_update_searcher(FindInFilesSearcher::SearchInputData p_input_data) {
-	searcher->set_search_text(p_input_data.text);
-	searcher->set_directory(p_input_data.directory);
-	searcher->set_file_filter(p_input_data.allow_file_regex_strings, p_input_data.ignore_file_regex_strings);
-	searcher->set_case_sensitive(p_input_data.match_case_sensitive);
-	searcher->set_whole_words(p_input_data.match_whole_words);
-	searcher->set_use_regex(p_input_data.match_use_regex);
 }
 
 void FindInFilesPanelTab::_update_file_preview() {
@@ -119,7 +117,7 @@ void FindInFilesPanelTab::_soft_limit_cancel_search() {
 	update_poll_timer->stop();
 	searcher->stop();
 
-	FindInFilesSearcher::FindInFilesStatus status = searcher->get_status();
+	FindInFilesSearcher::Status status = searcher->get_status();
 	results->get_root()->set_text(0, vformat(TTR("%s+ results (search was stopped early)"), status.results.size()));
 }
 
@@ -144,7 +142,9 @@ void FindInFilesPanelTab::_run_search() {
 	searcher->stop();
 
 	// Clear results
-	_reset();
+	results->reset();
+	result_items.clear();
+	result_filesystem_levels.clear();
 
 	searcher->start();
 	update_poll_timer->start();
@@ -155,16 +155,34 @@ void FindInFilesPanelTab::expand_collapse_tree(bool p_collapse) {
 	results->get_root()->set_collapsed_recursive(p_collapse);
 }
 
-FindInFilesPanelTab::FindInFilesPanelTab(FindInFilesSearcher::SearchInputData p_input_data) {
+void FindInFilesPanelTab::popup_configure() {
+	// Cancel current search.
+	update_poll_timer->stop();
+	searcher->stop();
+
+	dialog->popup_centered_ratio_xy(0.5, 0.65);
+}
+
+void FindInFilesPanelTab::rerun_search() {
+	_run_search();
+}
+
+FindInFilesPanelTab::FindInFilesPanelTab(const FindInFilesSearcher::InputData &p_input_data, const FindInFilesSearcher::Status &p_status) {
 	// TODO Soft Result Limit
 	const int result_limit = 1000;
 	searcher = memnew(FindInFilesSearcher);
+	searcher->set_input_data(p_input_data);
 	searcher->set_result_limit(result_limit, true);
-	_update_searcher(p_input_data);
+
+	dialog = memnew(FindInFilesDialog2);
+	add_child(dialog);
+	dialog->set_initial_search_data(p_input_data, p_status);
+	dialog->set_run_search_on_popup(false);
+	dialog->connect(SNAME("confirmed"), callable_mp(this, &FindInFilesPanelTab::_on_dialog_confirmed));
 
 	update_poll_timer = memnew(Timer);
 	update_poll_timer->set_wait_time(0.05);
-	update_poll_timer->connect(SNAME("timeout"), callable_mp(this, &FindInFilesPanelTab::_update_search_status));
+	update_poll_timer->connect(SNAME("timeout"), callable_mp(this, &FindInFilesPanelTab::_update_from_searcher));
 	add_child(update_poll_timer);
 
 	// The results list & editor
@@ -193,11 +211,6 @@ FindInFilesPanelTab::FindInFilesPanelTab(FindInFilesSearcher::SearchInputData p_
 }
 
 FindInFilesPanelTab::~FindInFilesPanelTab() {
-	file_preview->queue_free();
-	continue_confirm_dialog->queue_free();
-	// status_display->queue_free();
-	results->queue_free();
-	update_poll_timer->queue_free();
 	memdelete(searcher);
 }
 
@@ -222,11 +235,50 @@ void FindInFilesPanel2::_on_tab_closed(int p_tab) {
 	tabs->remove_child(tab);
 	tab->queue_free();
 
-	// Remove the bottom panel tab when the last search is closed
-	if (tabs->get_tab_count() == 0 && has_editor_panel) {
-		EditorNode::get_singleton()->remove_bottom_panel_item(this);
-		has_editor_panel = false;
+	// Hide the bottom panel tab when the last search is closed
+	if (tabs->get_tab_count() == 0) {
+		emit_signal("tabs_empty");
 	}
+}
+
+void FindInFilesPanel2::_on_rerun_pressed() {
+	FindInFilesPanelTab *tab = cast_to<FindInFilesPanelTab>(tabs->get_current_tab_control());
+	if (!tab) {
+		return;
+	}
+
+	tab->rerun_search();
+}
+
+void FindInFilesPanel2::_on_configure_pressed() {
+	FindInFilesPanelTab *tab = cast_to<FindInFilesPanelTab>(tabs->get_current_tab_control());
+	if (!tab) {
+		return;
+	}
+
+	tab->popup_configure();
+}
+
+void FindInFilesPanel2::_on_configure_cancelled() {
+	configuring_tab = nullptr;
+}
+
+void FindInFilesPanel2::add_tab(FindInFilesDialog2 *p_dialog) {
+	if (!p_dialog) {
+		return;
+	}
+
+	FindInFilesSearcher::InputData input;
+	FindInFilesSearcher::Status status;
+	p_dialog->get_initial_search_data(input, status);
+
+	FindInFilesPanelTab *child = memnew(FindInFilesPanelTab(input, status));
+	tabs->add_child(child);
+	tabs->set_tab_title(tabs->get_tab_count() - 1, vformat("Find '%s'", input.text));
+	tabs->set_tab_button_icon(tabs->get_tab_count() - 1, get_editor_theme_icon(SNAME("Close")));
+	tabs->set_current_tab(tabs->get_tab_idx_from_control(child));
+
+	emit_signal("tab_added");
 }
 
 void FindInFilesPanel2::_expand_collapse_tree(bool p_collapse) {
@@ -248,7 +300,6 @@ void FindInFilesPanel2::_notification(int p_what) {
 			configure_btn->set_icon(get_editor_theme_icon(SNAME("Tools")));
 			expand_all_btn->set_icon(get_editor_theme_icon(SNAME("ExpandTree")));
 			collapse_all_btn->set_icon(get_editor_theme_icon(SNAME("CollapseTree")));
-			show_source_btn->set_icon(get_editor_theme_icon(SNAME("Script")));
 
 			for (int i = 0; i < tabs->get_tab_count(); ++i) {
 				tabs->set_tab_button_icon(i, get_editor_theme_icon(SNAME("Close")));
@@ -257,25 +308,12 @@ void FindInFilesPanel2::_notification(int p_what) {
 	}
 }
 
-void FindInFilesPanel2::add_search(FindInFilesSearcher::SearchInputData p_input_data) {
-	if (!has_editor_panel) {
-		EditorNode::get_singleton()->add_bottom_panel_item(TTR("Search Results"), get_singleton());
-		has_editor_panel = true;
-	}
-
-	EditorNode::get_singleton()->make_bottom_panel_item_visible(get_singleton());
-
-	FindInFilesPanelTab *child = memnew(FindInFilesPanelTab(p_input_data));
-	tabs->add_child(child);
-	tabs->set_tab_title(tabs->get_tab_count() - 1, vformat("Find '%s'", p_input_data.text));
-	tabs->set_tab_button_icon(tabs->get_tab_count() - 1, get_editor_theme_icon(SNAME("Close")));
-	tabs->set_current_tab(tabs->get_tab_idx_from_control(child));
+void FindInFilesPanel2::_bind_methods() {
+	ADD_SIGNAL(MethodInfo("tabs_empty"));
+	ADD_SIGNAL(MethodInfo("tab_added"));
 }
 
 FindInFilesPanel2::FindInFilesPanel2() {
-	ERR_FAIL_COND(singleton != nullptr);
-	singleton = this;
-
 	set_custom_minimum_size(Size2(0, 200) * EDSCALE);
 
 	HBoxContainer *main_hbox = memnew(HBoxContainer);
@@ -290,11 +328,13 @@ FindInFilesPanel2::FindInFilesPanel2() {
 	refresh_btn = memnew(Button);
 	refresh_btn->set_tooltip_text(TTR("Rerun"));
 	refresh_btn->set_flat(true);
+	refresh_btn->connect(SNAME("pressed"), callable_mp(this, &FindInFilesPanel2::_on_rerun_pressed));
 	buttons_vbox->add_child(refresh_btn);
 
 	configure_btn = memnew(Button);
 	configure_btn->set_tooltip_text(TTR("Configure"));
 	configure_btn->set_flat(true);
+	configure_btn->connect(SNAME("pressed"), callable_mp(this, &FindInFilesPanel2::_on_configure_pressed));
 	buttons_vbox->add_child(configure_btn);
 
 	expand_all_btn = memnew(Button);
@@ -308,11 +348,6 @@ FindInFilesPanel2::FindInFilesPanel2() {
 	collapse_all_btn->set_flat(true);
 	collapse_all_btn->connect(SNAME("pressed"), callable_mp(this, &FindInFilesPanel2::_expand_collapse_tree).bind(true));
 	buttons_vbox->add_child(collapse_all_btn);
-
-	show_source_btn = memnew(Button);
-	show_source_btn->set_tooltip_text(TTR("Show source preview"));
-	show_source_btn->set_flat(true);
-	buttons_vbox->add_child(show_source_btn);
 
 	tabs = memnew(TabContainer);
 	tabs->set_anchors_and_offsets_preset(PRESET_FULL_RECT);

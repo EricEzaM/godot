@@ -33,7 +33,6 @@
 
 #include "core/object/script_language.h"
 #include "editor/editor_plugin.h"
-#include "editor/find_in_files_panel.h"
 #include "scene/gui/dialogs.h"
 #include "scene/gui/panel_container.h"
 #include "scene/resources/syntax_highlighter.h"
@@ -315,7 +314,6 @@ class ScriptEditor : public PanelContainer {
 	Button *script_back = nullptr;
 	Button *script_forward = nullptr;
 
-	FindInFilesPanel2 *find_in_files_panel = nullptr;
 	FindInFilesDialog2 *find_in_files_dialog = nullptr;
 	// FindInFilesPanel *find_in_files = nullptr;
 	// Button *find_in_files_button = nullptr;
@@ -508,6 +506,10 @@ public:
 	static ScriptEditor *get_singleton() { return script_editor; }
 
 	ScriptEditorBase *create_script_editor(Ref<Resource> p_for_resource) const;
+
+	FindInFilesDialog2 *get_find_dialog() const {
+		return find_in_files_dialog;
+	}
 
 	bool toggle_scripts_panel();
 	bool is_scripts_panel_toggled();

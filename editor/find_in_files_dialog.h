@@ -32,21 +32,21 @@
 #define FIND_IN_FILES_DIALOG_H
 
 #include "editor/find_in_files_searcher.h"
-#include "modules/regex/regex.h"
-#include "plugins/script_editor_plugin.h"
 #include "scene/gui/dialogs.h"
-#include "scene/gui/item_list.h"
 
+class FindInFilesTree;
+class TextureRect;
+class MenuButton;
 class FindInFilesFilePreview;
 class LineEdit;
 class CheckBox;
 class FileDialog;
 class HBoxContainer;
-class FindInFilesSearcher;
-struct FindInFilesSearcher::FindResult;
 
 class FindInFilesDialog2 : public AcceptDialog {
-	GDCLASS(FindInFilesDialog2, AcceptDialog);
+	GDCLASS(FindInFilesDialog2, AcceptDialog)
+	bool has_changed = false;
+	bool run_search_on_popup = true;
 
 	Vector<String> recent_filters; // Start = oldest, End = newest
 	HashMap<String, FindInFilesSearcher::FindResult> result_items;
@@ -83,7 +83,7 @@ class FindInFilesDialog2 : public AcceptDialog {
 
 	void _run_search();
 
-	void _update_search_status();
+	void _update_from_searcher();
 
 	void _on_folder_selected(const String &path);
 	void _on_folder_text_changed(const String &p_string);
@@ -105,11 +105,12 @@ class FindInFilesDialog2 : public AcceptDialog {
 	void _do_replace_all();
 	void _update_replace_preview();
 
+	void _set_changed();
+
 protected:
 	void _notification(int p_what);
 
 	void custom_action(const String &) override;
-	void ok_pressed() override;
 
 public:
 	enum FindInFilesMode {
@@ -120,9 +121,19 @@ public:
 	void shortcut_input(const Ref<InputEvent> &p_event) override;
 
 	FindInFilesMode get_dialog_mode() const;
-	void set_find_in_files_mode(FindInFilesMode p_mode);
+	void set_dialog_mode(FindInFilesMode p_mode);
 
 	void set_find_text(const String &p_text);
+
+	void set_run_search_on_popup(bool p_run);
+
+	bool get_has_changed() const { return has_changed; }
+
+	// This method sets the initial state of the dialog, for use when "configuring" an existing search from the panel.
+	// It means that when the dialog is opened, it will be correctly configured and also have all the results from
+	// the previous search so it won't have to re-do the search if no parameters have changed.
+	void set_initial_search_data(const FindInFilesSearcher::InputData &p_input_data, const FindInFilesSearcher::Status &p_status);
+	void get_initial_search_data(FindInFilesSearcher::InputData &r_input_data, FindInFilesSearcher::Status &r_status);
 
 	FindInFilesDialog2();
 };

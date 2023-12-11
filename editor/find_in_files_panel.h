@@ -32,11 +32,10 @@
 #define FIND_IN_FILES_PANEL_H
 
 #include "editor/find_in_files_searcher.h"
-
-#include "scene/gui/control.h"
 #include "scene/gui/dialogs.h"
-#include "scene/gui/menu_button.h"
 
+class FindInFilesPanel2;
+class FindInFilesDialog2;
 class FindInFilesTree;
 class FindInFilesFilePreview;
 class TreeItem;
@@ -47,10 +46,13 @@ class Tree;
 
 class FindInFilesPanelTab : public Control {
 	GDCLASS(FindInFilesPanelTab, Control)
+	friend class FindInFilesPanel2;
+
 	Ref<Texture2D> file_icon;
 	Ref<Texture2D> folder_icon;
 	Color folder_icon_color;
 
+	FindInFilesDialog2 *dialog;
 	FindInFilesSearcher *searcher;
 	Timer *update_poll_timer;
 
@@ -65,57 +67,55 @@ class FindInFilesPanelTab : public Control {
 
 	ConfirmationDialog *continue_confirm_dialog;
 
+	void _on_dialog_confirmed();
 	void _on_open_file_requested(const String &p_path, int p_line, int p_column);
 
-	void _reset();
-	void _update_search_status();
-	void _update_searcher(FindInFilesSearcher::SearchInputData p_input_data);
+	void _update_from_searcher();
 	void _update_file_preview();
 
 	void _soft_limit_continue_search();
 	void _soft_limit_cancel_search();
+	void _run_search();
 
 protected:
 	void _notification(int p_what);
-	void _run_search();
 
 public:
 	void expand_collapse_tree(bool p_collapse);
+	void popup_configure();
+	void rerun_search();
 
-	FindInFilesPanelTab(FindInFilesSearcher::SearchInputData p_input_data);
+	FindInFilesPanelTab(const FindInFilesSearcher::InputData &p_input_data, const FindInFilesSearcher::Status &p_status);
 	~FindInFilesPanelTab();
 };
 
 class FindInFilesPanel2 : public Control {
 	GDCLASS(FindInFilesPanel2, Control)
-	static FindInFilesPanel2 *singleton;
-
-	bool has_editor_panel = false;
 
 	TabContainer *tabs;
+
+	FindInFilesPanelTab *configuring_tab = nullptr;
 
 	Button *refresh_btn;
 	Button *configure_btn;
 	Button *expand_all_btn;
 	Button *collapse_all_btn;
-	Button *show_source_btn;
 
 	void _on_tab_changed(int p_new_tab);
 	void _on_tab_closed(int p_tab);
+	void _on_rerun_pressed();
+	void _on_configure_pressed();
+	void _on_configure_cancelled();
+
 	void _expand_collapse_tree(bool p_collapse);
 
 protected:
 	void _notification(int p_what);
+	static void _bind_methods();
 
 public:
-	static FindInFilesPanel2 *get_singleton() {
-		if (!singleton) {
-			singleton = memnew(FindInFilesPanel2);
-		}
-		return singleton;
-	}
-
-	void add_search(FindInFilesSearcher::SearchInputData p_input_data);
+	void update_search(const FindInFilesSearcher::InputData &p_input_data);
+	void add_tab(FindInFilesDialog2 *p_dialog);
 
 	FindInFilesPanel2();
 };

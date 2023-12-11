@@ -3681,7 +3681,7 @@ void ScriptEditor::_on_find_in_files_requested(String text) {
 	if (!text.is_empty()) {
 		find_in_files_dialog->set_find_text(text);
 	}
-	find_in_files_dialog->set_find_in_files_mode(FindInFilesDialog2::FIND_MODE);
+	find_in_files_dialog->set_dialog_mode(FindInFilesDialog2::FIND_MODE);
 	find_in_files_dialog->popup_centered_ratio_xy(0.5, 0.65);
 }
 
@@ -3692,7 +3692,7 @@ void ScriptEditor::_on_replace_in_files_requested(String text) {
 	if (!text.is_empty()) {
 		find_in_files_dialog->set_find_text(text);
 	}
-	find_in_files_dialog->set_find_in_files_mode(FindInFilesDialog2::REPLACE_MODE);
+	find_in_files_dialog->set_dialog_mode(FindInFilesDialog2::REPLACE_MODE);
 	find_in_files_dialog->popup_centered_ratio_xy(0.5, 0.65);
 }
 
@@ -4179,9 +4179,19 @@ ScriptEditor::ScriptEditor(WindowWrapper *p_wrapper) {
 	help_search_dialog->connect("go_to_help", callable_mp(this, &ScriptEditor::_help_class_goto));
 
 	find_in_files_dialog = memnew(FindInFilesDialog2);
+	add_child(find_in_files_dialog);
+
+	FindInFilesPanel2 *find_panel = memnew(FindInFilesPanel2);
+	find_in_files_dialog->connect(SNAME("confirmed"), callable_mp(find_panel, &FindInFilesPanel2::add_tab).bind(find_in_files_dialog));
+	Button *search_results_button = EditorNode::get_singleton()->add_bottom_panel_item(TTR("Search Results"), find_panel);
+	search_results_button->hide();
+	find_panel->connect(SNAME("tabs_empty"), callable_mp((CanvasItem *)search_results_button, &CanvasItem::hide));
+	find_panel->connect(SNAME("tabs_empty"), callable_mp(EditorNode::get_singleton(), &EditorNode::hide_bottom_panel));
+	find_panel->connect(SNAME("tab_added"), callable_mp((CanvasItem *)search_results_button, &CanvasItem::show));
+	find_panel->connect(SNAME("tab_added"), callable_mp(EditorNode::get_singleton(), &EditorNode::make_bottom_panel_item_visible).bind(find_panel));
+
 	// find_in_files_dialog->connect(FindInFilesDialog::SIGNAL_FIND_REQUESTED, callable_mp(this, &ScriptEditor::_start_find_in_files).bind(false));
 	// find_in_files_dialog->connect(FindInFilesDialog::SIGNAL_REPLACE_REQUESTED, callable_mp(this, &ScriptEditor::_start_find_in_files).bind(true));
-	add_child(find_in_files_dialog);
 	// find_in_files = memnew(FindInFilesPanel);
 	// find_in_files_button = EditorNode::get_singleton()->add_bottom_panel_item(TTR("Search Results"), find_in_files);
 	// find_in_files->set_custom_minimum_size(Size2(0, 200) * EDSCALE);

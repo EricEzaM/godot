@@ -55,7 +55,6 @@ void FindInFilesTree::_notification(int p_what) {
 }
 
 void FindInFilesTree::_bind_methods() {
-	// TODO REQUIRED??
 	ClassDB::bind_method("_draw_result_text", &FindInFilesTree::_draw_result_text);
 	ADD_SIGNAL(MethodInfo("open_file_requested", PropertyInfo(Variant::STRING, "file_path"), PropertyInfo(Variant::INT, "line")));
 }
