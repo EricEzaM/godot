@@ -46,7 +46,6 @@
 #include "core/string/translation.h"
 #include "core/version.h"
 #include "editor/editor_string_names.h"
-#include "find_in_files_panel.h"
 #include "main/main.h"
 #include "scene/3d/bone_attachment_3d.h"
 #include "scene/gui/color_picker.h"
