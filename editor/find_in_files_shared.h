@@ -48,6 +48,9 @@ class FindInFilesContainerBase : public Control {
 class FindInFilesFilePreview : public VBoxContainer {
 	GDCLASS(FindInFilesFilePreview, VBoxContainer)
 
+	String current_file;
+	int current_line;
+	
 	ScriptEditorBase *editor = nullptr;
 
 	Label *current_file_display;
@@ -61,7 +64,7 @@ protected:
 
 public:
 	void clear_file();
-	void open_file(String p_path, int p_line);
+	void open_file(const String &p_path, int p_line);
 
 	FindInFilesFilePreview();
 	~FindInFilesFilePreview();

@@ -157,8 +157,7 @@ void FindInFilesDialog2::_run_search() {
 	searcher->stop();
 
 	// Clear results
-	results->reset();
-	_update_file_preview();
+	clear_results_on_next_update = true;
 
 	// Update searcher options for next search.
 	searcher->set_case_sensitive(match_case_btn->is_pressed());
@@ -176,6 +175,8 @@ void FindInFilesDialog2::_run_search() {
 
 	if (search_string.is_empty()) {
 		status_display->set_text(TTR("Type a search query to find in files."));
+		results->reset();
+		_update_file_preview();
 		return;
 	}
 
@@ -195,12 +196,13 @@ void FindInFilesDialog2::_run_search() {
 }
 
 void FindInFilesDialog2::_update_from_searcher() {
+	if (clear_results_on_next_update) {
+		results->reset();
+		clear_results_on_next_update = false;
+	}
+
 	FindInFilesSearcher::Status status = searcher->get_status();
 	status_display->set_text(vformat("%s%s matches in %s%s files", status.results.size(), status.limit_reached ? "+" : "", status.files_with_matches, status.limit_reached ? "+" : ""));
-
-	if (status.results.size() == 0) {
-		_update_file_preview();
-	}
 
 	for (const FindInFilesSearcher::FindResult &r : status.results) {
 		results->add_result(r);
@@ -208,7 +210,10 @@ void FindInFilesDialog2::_update_from_searcher() {
 	}
 
 	// Select first result when it is available - do not override user selection.
-	results->select_first_non_root();
+	if (!results->get_selected()) {
+		results->select_first_non_root();
+		_update_file_preview();
+	}
 
 	if (status.finished) {
 		update_poll_timer->stop();
@@ -338,24 +343,28 @@ void FindInFilesDialog2::_notification(int p_what) {
 	switch (p_what) {
 		case NOTIFICATION_ENTER_TREE: {
 			_load_recent_filters();
-		} break;
+		}
+		break;
 		case NOTIFICATION_EXIT_TREE: {
 			_save_recent_filters(true);
-		} break;
+		}
+		break;
 		case NOTIFICATION_VISIBILITY_CHANGED: {
 			if (is_visible()) {
 				has_changed = false;
 				search_line_edit->grab_focus();
 				search_line_edit->select_all();
-				if (run_search_on_popup && !search_line_edit->get_text().is_empty()) {
+				const bool has_text = !search_line_edit->get_text().is_empty();
+				if (run_search_on_popup && has_text) {
 					_run_search();
-				} else {
+				} else if (has_text) {
 					_update_from_searcher();
 				}
 			} else {
 				_save_recent_filters(false);
 			}
-		} break;
+		}
+		break;
 		case NOTIFICATION_READY:
 		case NOTIFICATION_THEME_CHANGED: {
 			invalid_result_color = get_theme_color(SNAME("error_color"), EditorStringName(Editor));
@@ -368,7 +377,8 @@ void FindInFilesDialog2::_notification(int p_what) {
 
 			results->add_theme_font_override("font", EditorNode::get_singleton()->get_gui_base()->get_theme_font(SNAME("source"), EditorStringName(EditorFonts)));
 			results->add_theme_font_size_override("font_size", EditorNode::get_singleton()->get_gui_base()->get_theme_font_size(SNAME("source_size"), EditorStringName(EditorFonts)));
-		} break;
+		}
+		break;
 	}
 }
 

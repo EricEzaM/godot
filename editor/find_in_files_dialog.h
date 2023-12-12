@@ -45,8 +45,17 @@ class HBoxContainer;
 
 class FindInFilesDialog2 : public AcceptDialog {
 	GDCLASS(FindInFilesDialog2, AcceptDialog)
+public:
+	enum FindInFilesMode {
+		FIND_MODE,
+		REPLACE_MODE
+	};
+
+private:
+	FindInFilesMode mode = FIND_MODE;
 	bool has_changed = false;
 	bool run_search_on_popup = true;
+	bool clear_results_on_next_update = false;
 
 	Vector<String> recent_filters; // Start = oldest, End = newest
 	HashMap<String, FindInFilesSearcher::FindResult> result_items;
@@ -113,27 +122,21 @@ protected:
 	void custom_action(const String &) override;
 
 public:
-	enum FindInFilesMode {
-		FIND_MODE,
-		REPLACE_MODE
-	} mode;
-
-	void shortcut_input(const Ref<InputEvent> &p_event) override;
-
 	FindInFilesMode get_dialog_mode() const;
 	void set_dialog_mode(FindInFilesMode p_mode);
+
+	void shortcut_input(const Ref<InputEvent> &p_event) override;
+	void get_initial_search_data(FindInFilesSearcher::InputData &r_input_data, FindInFilesSearcher::Status &r_status);
+	// This method sets the initial state of the dialog, for use when "configuring" an existing search from the panel.
+	// It means that when the dialog is opened, it will be correctly configured and also have all the results from
+	// the previous search so it won't have to re-do the search if no parameters have changed.
+	void set_initial_search_data(const FindInFilesSearcher::InputData &p_input_data, const FindInFilesSearcher::Status &p_status);
 
 	void set_find_text(const String &p_text);
 
 	void set_run_search_on_popup(bool p_run);
 
-	bool get_has_changed() const { return has_changed; }
-
-	// This method sets the initial state of the dialog, for use when "configuring" an existing search from the panel.
-	// It means that when the dialog is opened, it will be correctly configured and also have all the results from
-	// the previous search so it won't have to re-do the search if no parameters have changed.
-	void set_initial_search_data(const FindInFilesSearcher::InputData &p_input_data, const FindInFilesSearcher::Status &p_status);
-	void get_initial_search_data(FindInFilesSearcher::InputData &r_input_data, FindInFilesSearcher::Status &r_status);
+	bool has_configuration_changed_since_open() const { return has_changed; }
 
 	FindInFilesDialog2();
 };

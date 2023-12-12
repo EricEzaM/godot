@@ -60,12 +60,19 @@ void FindInFilesFilePreview::clear_file() {
 	_set_editor(nullptr);
 }
 
-void FindInFilesFilePreview::open_file(String p_path, int p_line) {
-	current_file_display->set_text(p_path.get_file());
-	current_file_folder_display->set_text(p_path.replace(p_path.get_file(), ""));
+void FindInFilesFilePreview::open_file(const String &p_path, int p_line) {
+	if (current_file == p_path && current_line == p_line) {
+		return;
+	}
 
 	const Ref<Resource> file = ScriptEditor::get_singleton()->open_file(p_path, false);
 	if (file.is_valid()) {
+		current_file = p_path;
+		current_line = p_line;
+
+		current_file_display->set_text(p_path.get_file());
+		current_file_folder_display->set_text(p_path.replace(p_path.get_file(), ""));
+
 		_set_editor(ScriptEditor::get_singleton()->create_script_editor(file));
 		if (editor) {
 			editor->set_edited_resource(file);

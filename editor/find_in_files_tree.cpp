@@ -30,9 +30,9 @@
 
 #include "editor/find_in_files_tree.h"
 
-#include "editor_scale.h"
-#include "editor_string_names.h"
-#include "find_in_files_shared.h"
+#include "editor/editor_scale.h"
+#include "editor/editor_string_names.h"
+#include "editor/find_in_files_shared.h"
 #include "scene/theme/theme_db.h"
 
 void FindInFilesTree::_notification(int p_what) {

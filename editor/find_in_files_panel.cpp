@@ -42,7 +42,7 @@
 #include "scene/gui/tree.h"
 
 void FindInFilesPanelTab::_on_dialog_confirmed() {
-	if (!dialog->get_has_changed()) {
+	if (!dialog->has_configuration_changed_since_open()) {
 		return;
 	}
 
