@@ -30,6 +30,7 @@
 
 #include "editor/find_in_files_dialog.h"
 
+#include "core/input/input_map.h"
 #include "editor/editor_node.h"
 #include "editor/editor_paths.h"
 #include "editor/editor_scale.h"
@@ -84,6 +85,23 @@ void FindInFilesDialog2::_on_match_regex_toggled(bool p_toggled_on) {
 	_run_search();
 }
 
+void FindInFilesDialog2::_on_search_gui_input(const Ref<InputEvent> &p_input) {
+	// For convenience, when certain actions are performed in the line edit,
+	// transfer them to the results control instead. This allows for better UX, like scrolling the list of results
+	// and navigating to a result without changing focus away from the line edit.
+	if (InputMap::get_singleton()->action_has_event("ui_down", p_input) ||
+		InputMap::get_singleton()->action_has_event("ui_up", p_input) ||
+		InputMap::get_singleton()->action_has_event("ui_accept", p_input)) {
+		results->gui_input(p_input);
+
+		// Even if the tree didn't handle it, (e.g. pressed "up" when the first item is selected, we still mark the event
+		// as accepted to avoid the line edit gui processing the event.
+		search_line_edit->accept_event();
+	}
+
+	// TODO also add this for the replace box
+}
+
 void FindInFilesDialog2::_update_file_preview() {
 	const TreeItem *selected = results->get_selected();
 	if (!selected) {
@@ -99,24 +117,6 @@ void FindInFilesDialog2::_update_file_preview() {
 
 	const FindInFilesSearcher::FindResult r = result_items.get(ids.front());
 	file_preview->open_file(r.path, r.start_line);
-}
-
-void FindInFilesDialog2::_update_selected_item() {
-	TreeItem *selected = results->get_selected();
-	if (!selected) {
-		return;
-	}
-
-	const Array &ids = selected->get_meta("ids");
-	if (ids.is_empty()) {
-		return;
-	}
-
-	FindInFilesSearcher::FindResult r = result_items.get(ids.front());
-	if (!searcher->is_result_valid(r)) {
-		selected->set_text(0, "INVALID");
-		selected->set_custom_color(0, invalid_result_color);
-	}
 }
 
 void FindInFilesDialog2::_on_open_file_requested(const String &p_path, int p_line, int p_column) {
@@ -156,7 +156,9 @@ void FindInFilesDialog2::_run_search() {
 	update_poll_timer->stop();
 	searcher->stop();
 
-	// Clear results
+	// Clear results on next update as a new search is about to start
+	// This is done on the next update rather than immediately to avoid the tree 'flashing'
+	// blank between searches as the user is typing.
 	clear_results_on_next_update = true;
 
 	// Update searcher options for next search.
@@ -173,9 +175,10 @@ void FindInFilesDialog2::_run_search() {
 	const String search_string = search_line_edit->get_text();
 	searcher->set_search_text(search_string);
 
+	// If no search, clear everything.
 	if (search_string.is_empty()) {
 		status_display->set_text(TTR("Type a search query to find in files."));
-		results->reset();
+		_clear_results();
 		_update_file_preview();
 		return;
 	}
@@ -195,28 +198,39 @@ void FindInFilesDialog2::_run_search() {
 	update_poll_timer->start();
 }
 
+void FindInFilesDialog2::_clear_results() {
+	results->reset();
+	result_items.clear();
+}
+
 void FindInFilesDialog2::_update_from_searcher() {
 	if (clear_results_on_next_update) {
-		results->reset();
+		_clear_results();
 		clear_results_on_next_update = false;
 	}
 
 	FindInFilesSearcher::Status status = searcher->get_status();
 	status_display->set_text(vformat("%s%s matches in %s%s files", status.results.size(), status.limit_reached ? "+" : "", status.files_with_matches, status.limit_reached ? "+" : ""));
 
+	// We do not currently have any results and results are about to be added, so on the next frame try select first result
+	if (result_items.is_empty() && !status.results.is_empty()) {
+		callable_mp(this, &FindInFilesDialog2::_select_first_result).call_deferred();
+	}
+
 	for (const FindInFilesSearcher::FindResult &r : status.results) {
 		results->add_result(r);
 		result_items[r.id] = r;
 	}
 
+	if (status.finished) {
+		update_poll_timer->stop();
+	}
+}
+
+void FindInFilesDialog2::_select_first_result() {
 	// Select first result when it is available - do not override user selection.
 	if (!results->get_selected()) {
 		results->select_first_non_root();
-		_update_file_preview();
-	}
-
-	if (status.finished) {
-		update_poll_timer->stop();
 	}
 }
 
@@ -295,7 +309,7 @@ void FindInFilesDialog2::_do_replace_on_selected() {
 		return;
 	}
 
-	const TreeItem *selected = results->get_selected();
+	TreeItem *selected = results->get_selected();
 	ERR_FAIL_COND_MSG(!selected, "Can't perform replace - nothing selected.");
 
 	const Array ids = selected->get_meta("ids");
@@ -305,7 +319,12 @@ void FindInFilesDialog2::_do_replace_on_selected() {
 	const FindInFilesSearcher::FindResult result = result_items.get(ids.front());
 	if (searcher->replace_match(result, replace_line_edit->get_text())) {
 		_update_file_preview();
-		_update_selected_item();
+
+		if (!searcher->is_result_valid(result)) {
+			selected->set_text(0, "INVALID");
+			selected->set_custom_color(0, invalid_result_color);
+		}
+
 		ScriptEditor::get_singleton()->reload_scripts();
 	}
 }
@@ -352,15 +371,25 @@ void FindInFilesDialog2::_notification(int p_what) {
 		case NOTIFICATION_VISIBILITY_CHANGED: {
 			if (is_visible()) {
 				has_changed = false;
+
 				search_line_edit->grab_focus();
 				search_line_edit->select_all();
-				const bool has_text = !search_line_edit->get_text().is_empty();
-				if (run_search_on_popup && has_text) {
+
+				// This code path gets executed if search text is set before popup (e.g. highlight some text then press the find in files shortcut)
+				const bool text_changed_since_last_search = search_line_edit->get_text() != searcher->get_search_text();
+				if (run_search_on_popup && text_changed_since_last_search) {
+					_clear_results();
 					_run_search();
-				} else if (has_text) {
+				}
+
+				// This code path is executed when opening the dialog from the results panel, to configure an existing search.
+				// We don't automatically re-run the search, and if the search query is not empty then we just populate based on the existing
+				// searcher data.
+				if (!run_search_on_popup && !searcher->get_search_text().is_empty()) {
 					_update_from_searcher();
 				}
 			} else {
+				// TODO this will not sync between other dialogs, the recent filters might need to be static?
 				_save_recent_filters(false);
 			}
 		}
@@ -480,6 +509,7 @@ FindInFilesDialog2::FindInFilesDialog2() {
 	search_line_edit = memnew(LineEdit);
 	search_line_edit->set_clear_button_enabled(true);
 	search_line_edit->set_h_size_flags(Control::SIZE_EXPAND_FILL);
+	search_line_edit->connect(SNAME("gui_input"), callable_mp(this, &FindInFilesDialog2::_on_search_gui_input));
 	search_line_edit->connect(SNAME("text_changed"), callable_mp(this, &FindInFilesDialog2::_run_search).unbind(1));
 	search_line_edit->connect(SNAME("text_changed"), callable_mp(this, &FindInFilesDialog2::_set_changed).unbind(1));
 	search_hbc->add_child(search_line_edit);

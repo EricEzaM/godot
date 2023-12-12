@@ -49,8 +49,8 @@ class FindInFilesFilePreview : public VBoxContainer {
 	GDCLASS(FindInFilesFilePreview, VBoxContainer)
 
 	String current_file;
-	int current_line;
-	
+	int current_line = -1;
+
 	ScriptEditorBase *editor = nullptr;
 
 	Label *current_file_display;

@@ -55,6 +55,8 @@ void FindInFilesFilePreview::_set_editor(ScriptEditorBase *p_editor) {
 }
 
 void FindInFilesFilePreview::clear_file() {
+	current_file = "";
+	current_line = -1;
 	current_file_display->set_text(TTR("Nothing selected"));
 	current_file_folder_display->set_text("");
 	_set_editor(nullptr);

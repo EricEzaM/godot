@@ -91,17 +91,19 @@ private:
 	Button *replace_all_dialog_btn = nullptr;
 
 	void _run_search();
+	void _clear_results();
 
 	void _update_from_searcher();
+	void _select_first_result();
 
 	void _on_folder_selected(const String &path);
 	void _on_folder_text_changed(const String &p_string);
 	void _on_file_filter_toggled(bool p_toggled_on);
 	void _on_recent_file_filter_selected(int p_idx);
 	void _on_match_regex_toggled(bool p_toggled_on);
+	void _on_search_gui_input(const Ref<InputEvent> &p_input);
 
 	void _update_file_preview();
-	void _update_selected_item();
 	void _on_open_file_requested(const String &p_path, int p_line, int p_column);
 
 	void _on_mode_changed();

@@ -97,7 +97,7 @@ void FindInFilesPanelTab::_update_file_preview() {
 		return;
 	}
 
-	// All the ids will be for the same file, doesnt matter which one we get.
+	// All the ids will be for the same file and line, doesnt matter which one we get.
 	const String id = ids.front();
 	if (result_items.has(id)) {
 		const FindInFilesSearcher::FindResult r = result_items[id];
