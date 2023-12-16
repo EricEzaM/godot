@@ -47,8 +47,8 @@
 #include "scene/gui/texture_rect.h"
 
 void FindInFilesDialog2::_on_folder_selected(const String &p_path) {
-	if (folder_line_edit->get_text() != p_path) {
-		folder_line_edit->set_text(p_path);
+	if (directory_line_edit->get_text() != p_path) {
+		directory_line_edit->set_text(p_path);
 		_run_search();
 	}
 }
@@ -56,8 +56,8 @@ void FindInFilesDialog2::_on_folder_selected(const String &p_path) {
 void FindInFilesDialog2::_on_folder_text_changed(const String &p_string) {
 	if (!p_string.begins_with("res://")) {
 		WARN_PRINT("Search directory must be within project folder, res://");
-		folder_line_edit->set_text(previous_folder_selection);
-		folder_line_edit->set_caret_column(folder_line_edit->get_text().size());
+		directory_line_edit->set_text(previous_folder_selection);
+		directory_line_edit->set_caret_column(directory_line_edit->get_text().size());
 		return;
 	}
 	_run_search();
@@ -90,8 +90,8 @@ void FindInFilesDialog2::_on_search_gui_input(const Ref<InputEvent> &p_input) {
 	// transfer them to the results control instead. This allows for better UX, like scrolling the list of results
 	// and navigating to a result without changing focus away from the line edit.
 	if (InputMap::get_singleton()->action_has_event("ui_down", p_input) ||
-		InputMap::get_singleton()->action_has_event("ui_up", p_input) ||
-		InputMap::get_singleton()->action_has_event("ui_accept", p_input)) {
+			InputMap::get_singleton()->action_has_event("ui_up", p_input) ||
+			InputMap::get_singleton()->action_has_event("ui_accept", p_input)) {
 		results->gui_input(p_input);
 
 		// Even if the tree didn't handle it, (e.g. pressed "up" when the first item is selected, we still mark the event
@@ -126,7 +126,14 @@ void FindInFilesDialog2::_on_open_file_requested(const String &p_path, int p_lin
 }
 
 void FindInFilesDialog2::_on_mode_changed() {
-	if (mode == FIND_MODE) {
+	if (replace_mode) {
+		set_title(TTR("Replace in Files"));
+		replace_dialog_btn = add_button(TTR("Replace"), true, "replace");
+		replace_all_dialog_btn = add_button(TTR("Replace All"), true, "replace_all");
+		replace_hbc->show();
+		replace_preview->show();
+		replace_preview_label->show();
+	} else {
 		set_title(TTR("Find in Files"));
 		if (replace_dialog_btn) {
 			remove_button(replace_dialog_btn);
@@ -138,17 +145,18 @@ void FindInFilesDialog2::_on_mode_changed() {
 		replace_preview->hide();
 		replace_preview_label->hide();
 	}
-	if (mode == REPLACE_MODE) {
-		set_title(TTR("Replace in Files"));
-		replace_dialog_btn = add_button(TTR("Replace"), true, "replace");
-		replace_all_dialog_btn = add_button(TTR("Replace All"), true, "replace_all");
-		replace_hbc->show();
-		replace_preview->show();
-		replace_preview_label->show();
+
+	const TreeItem *selected_before_remake = results->get_selected();
+	Array selected_item_ids;
+	if (selected_before_remake) {
+		selected_item_ids = selected_before_remake->get_meta("ids", Array());
 	}
 
-	results->set_group_results_on_same_line(mode == FIND_MODE);
-	results->remake_tree();
+	results->set_group_results_on_same_line(!replace_mode);
+
+	if (!selected_item_ids.is_empty()) {
+		results->select_by_result_id(selected_item_ids.front());
+	}
 }
 
 void FindInFilesDialog2::_run_search() {
@@ -165,7 +173,7 @@ void FindInFilesDialog2::_run_search() {
 	searcher->set_case_sensitive(match_case_btn->is_pressed());
 	searcher->set_whole_words(match_word_btn->is_pressed());
 	searcher->set_use_regex(match_regex_btn->is_pressed());
-	searcher->set_directory(folder_line_edit->get_text());
+	searcher->set_directory(directory_line_edit->get_text());
 	if (file_filter_chkbx->is_pressed()) {
 		searcher->set_file_filter(file_filter_line_edit->get_text());
 	} else {
@@ -305,7 +313,7 @@ void FindInFilesDialog2::_update_recent_filters_menu() {
 }
 
 void FindInFilesDialog2::_do_replace_on_selected() {
-	if (mode != REPLACE_MODE) {
+	if (!replace_mode) {
 		return;
 	}
 
@@ -321,8 +329,7 @@ void FindInFilesDialog2::_do_replace_on_selected() {
 		_update_file_preview();
 
 		if (!searcher->is_result_valid(result)) {
-			selected->set_text(0, "INVALID");
-			selected->set_custom_color(0, invalid_result_color);
+			results->remove_item(selected);
 		}
 
 		ScriptEditor::get_singleton()->reload_scripts();
@@ -330,7 +337,7 @@ void FindInFilesDialog2::_do_replace_on_selected() {
 }
 
 void FindInFilesDialog2::_do_replace_all() {
-	if (mode != REPLACE_MODE) {
+	if (!replace_mode) {
 		return;
 	}
 
@@ -338,7 +345,7 @@ void FindInFilesDialog2::_do_replace_all() {
 }
 
 void FindInFilesDialog2::_update_replace_preview() {
-	if (mode != REPLACE_MODE) {
+	if (!replace_mode) {
 		return;
 	}
 
@@ -346,7 +353,7 @@ void FindInFilesDialog2::_update_replace_preview() {
 	ERR_FAIL_COND_MSG(!selected, "Can't update replace preview - nothing selected.");
 
 	const Array ids = selected->get_meta("ids");
-	ERR_FAIL_COND_MSG(!ids.is_empty(), "Can't update replace preview - selected does not have 'ids' meta");
+	ERR_FAIL_COND_MSG(ids.is_empty(), "Can't update replace preview - selected does not have 'ids' meta");
 
 	const FindInFilesSearcher::FindResult result = result_items.get(ids.front());
 	const String preview = searcher->get_replace_match_preview(result, replace_line_edit->get_text());
@@ -354,24 +361,16 @@ void FindInFilesDialog2::_update_replace_preview() {
 	replace_preview->set_text(preview);
 }
 
-void FindInFilesDialog2::_set_changed() {
-	has_changed = true;
-}
-
 void FindInFilesDialog2::_notification(int p_what) {
 	switch (p_what) {
 		case NOTIFICATION_ENTER_TREE: {
 			_load_recent_filters();
-		}
-		break;
+		} break;
 		case NOTIFICATION_EXIT_TREE: {
 			_save_recent_filters(true);
-		}
-		break;
+		} break;
 		case NOTIFICATION_VISIBILITY_CHANGED: {
 			if (is_visible()) {
-				has_changed = false;
-
 				search_line_edit->grab_focus();
 				search_line_edit->select_all();
 
@@ -392,11 +391,9 @@ void FindInFilesDialog2::_notification(int p_what) {
 				// TODO this will not sync between other dialogs, the recent filters might need to be static?
 				_save_recent_filters(false);
 			}
-		}
-		break;
+		} break;
 		case NOTIFICATION_READY:
 		case NOTIFICATION_THEME_CHANGED: {
-			invalid_result_color = get_theme_color(SNAME("error_color"), EditorStringName(Editor));
 			match_case_btn->set_icon(get_theme_icon(SNAME("MatchCase"), EditorStringName(EditorIcons)));
 			match_word_btn->set_icon(get_theme_icon(SNAME("MatchWord"), EditorStringName(EditorIcons)));
 			match_regex_btn->set_icon(get_theme_icon(SNAME("MatchRegex"), EditorStringName(EditorIcons)));
@@ -406,8 +403,7 @@ void FindInFilesDialog2::_notification(int p_what) {
 
 			results->add_theme_font_override("font", EditorNode::get_singleton()->get_gui_base()->get_theme_font(SNAME("source"), EditorStringName(EditorFonts)));
 			results->add_theme_font_size_override("font_size", EditorNode::get_singleton()->get_gui_base()->get_theme_font_size(SNAME("source_size"), EditorStringName(EditorFonts)));
-		}
-		break;
+		} break;
 	}
 }
 
@@ -423,12 +419,12 @@ void FindInFilesDialog2::custom_action(const String &p_string) {
 
 void FindInFilesDialog2::shortcut_input(const Ref<InputEvent> &p_event) {
 	if (ED_IS_SHORTCUT("script_text_editor/find_in_files", p_event)) {
-		set_dialog_mode(FIND_MODE);
+		set_replace_mode(false);
 		set_input_as_handled();
 		return;
 	}
 	if (ED_IS_SHORTCUT("script_text_editor/replace_in_files", p_event)) {
-		set_dialog_mode(REPLACE_MODE);
+		set_replace_mode(true);
 		set_input_as_handled();
 		return;
 	}
@@ -436,16 +432,16 @@ void FindInFilesDialog2::shortcut_input(const Ref<InputEvent> &p_event) {
 	AcceptDialog::shortcut_input(p_event);
 }
 
-FindInFilesDialog2::FindInFilesMode FindInFilesDialog2::get_dialog_mode() const {
-	return mode;
+bool FindInFilesDialog2::is_replace_mode() const {
+	return replace_mode;
 }
 
-void FindInFilesDialog2::set_dialog_mode(FindInFilesMode p_mode) {
-	if (mode == p_mode) {
+void FindInFilesDialog2::set_replace_mode(bool p_mode) {
+	if (replace_mode == p_mode) {
 		return;
 	}
 
-	mode = p_mode;
+	replace_mode = p_mode;
 	_on_mode_changed();
 }
 
@@ -457,27 +453,31 @@ void FindInFilesDialog2::set_run_search_on_popup(bool p_run) {
 	run_search_on_popup = p_run;
 }
 
-void FindInFilesDialog2::get_initial_search_data(FindInFilesSearcher::InputData &r_input_data, FindInFilesSearcher::Status &r_status) {
-	r_input_data = searcher->get_input_data();
+void FindInFilesDialog2::get_state(FindReplaceConfiguration &r_config, FindInFilesSearcher::Status &r_status) const {
+	const FindConfiguration find_config = searcher->get_configuration();
+	r_config = FindReplaceConfiguration(find_config, replace_mode, replace_line_edit->get_text());
 	r_status = searcher->get_status();
 }
 
-void FindInFilesDialog2::set_initial_search_data(const FindInFilesSearcher::InputData &p_input_data, const FindInFilesSearcher::Status &p_status) {
-	searcher->set_input_data(p_input_data);
+void FindInFilesDialog2::set_state(const FindReplaceConfiguration &p_config, const FindInFilesSearcher::Status &p_status) {
+	searcher->set_configuration(p_config);
 	searcher->set_status(p_status);
-	set_find_text(p_input_data.text);
 
-	// TODO need to pass round the REPLACE text as well...
-	folder_line_edit->set_text(p_input_data.directory);
-	file_filter_line_edit->set_text(p_input_data.file_filter_string);
-	match_case_btn->set_pressed(p_input_data.match_case_sensitive);
-	match_word_btn->set_pressed(p_input_data.match_whole_words);
-	match_regex_btn->set_pressed(p_input_data.match_use_regex);
+	set_find_text(p_config.text);
+	replace_line_edit->set_text(p_config.replace_text);
+	set_replace_mode(p_config.is_replace_mode);
+
+	directory_line_edit->set_text(p_config.directory);
+	file_filter_line_edit->set_text(p_config.file_filter);
+	match_case_btn->set_pressed(p_config.match_case_sensitive);
+	match_word_btn->set_pressed(p_config.match_whole_words);
+	match_regex_btn->set_pressed(p_config.match_use_regex);
 }
 
 FindInFilesDialog2::FindInFilesDialog2() {
-	searcher = memnew(FindInFilesSearcher);
-	searcher->set_result_limit(100, false);
+	replace_mode = false;
+
+	searcher = memnew(FindInFilesSearcher(100, false));
 
 	set_exclusive(true);
 
@@ -511,7 +511,6 @@ FindInFilesDialog2::FindInFilesDialog2() {
 	search_line_edit->set_h_size_flags(Control::SIZE_EXPAND_FILL);
 	search_line_edit->connect(SNAME("gui_input"), callable_mp(this, &FindInFilesDialog2::_on_search_gui_input));
 	search_line_edit->connect(SNAME("text_changed"), callable_mp(this, &FindInFilesDialog2::_run_search).unbind(1));
-	search_line_edit->connect(SNAME("text_changed"), callable_mp(this, &FindInFilesDialog2::_set_changed).unbind(1));
 	search_hbc->add_child(search_line_edit);
 
 	match_case_btn = memnew(Button);
@@ -520,7 +519,6 @@ FindInFilesDialog2::FindInFilesDialog2() {
 	match_case_btn->set_tooltip_text(TTR("Match case"));
 	match_case_btn->set_focus_mode(Control::FOCUS_CLICK);
 	match_case_btn->connect(SNAME("toggled"), callable_mp(this, &FindInFilesDialog2::_run_search).unbind(1));
-	match_case_btn->connect(SNAME("toggled"), callable_mp(this, &FindInFilesDialog2::_set_changed).unbind(1));
 	search_hbc->add_child(match_case_btn);
 
 	match_word_btn = memnew(Button);
@@ -529,7 +527,6 @@ FindInFilesDialog2::FindInFilesDialog2() {
 	match_word_btn->set_tooltip_text(TTR("Match whole words (incompatible with Regex)"));
 	match_word_btn->set_focus_mode(Control::FOCUS_CLICK);
 	match_word_btn->connect(SNAME("toggled"), callable_mp(this, &FindInFilesDialog2::_run_search).unbind(1));
-	match_word_btn->connect(SNAME("toggled"), callable_mp(this, &FindInFilesDialog2::_set_changed).unbind(1));
 	search_hbc->add_child(match_word_btn);
 
 	match_regex_btn = memnew(Button);
@@ -538,7 +535,6 @@ FindInFilesDialog2::FindInFilesDialog2() {
 	match_regex_btn->set_tooltip_text(TTR("Use regular expressions (regex)"));
 	match_regex_btn->set_focus_mode(Control::FOCUS_CLICK);
 	match_regex_btn->connect(SNAME("toggled"), callable_mp(this, &FindInFilesDialog2::_on_match_regex_toggled));
-	match_regex_btn->connect(SNAME("toggled"), callable_mp(this, &FindInFilesDialog2::_set_changed).unbind(1));
 	search_hbc->add_child(match_regex_btn);
 
 	// Replace
@@ -549,7 +545,6 @@ FindInFilesDialog2::FindInFilesDialog2() {
 	replace_line_edit->set_clear_button_enabled(true);
 	replace_line_edit->set_h_size_flags(Control::SIZE_EXPAND_FILL);
 	replace_line_edit->connect("text_changed", callable_mp(this, &FindInFilesDialog2::_update_replace_preview).unbind(1));
-	replace_line_edit->connect("text_changed", callable_mp(this, &FindInFilesDialog2::_set_changed).unbind(1));
 	replace_hbc->add_child(replace_line_edit);
 	replace_hbc->hide();
 
@@ -561,17 +556,15 @@ FindInFilesDialog2::FindInFilesDialog2() {
 	dir_label->set_text("Folder");
 	files_filter_hbc->add_child(dir_label);
 
-	folder_line_edit = memnew(LineEdit);
-	folder_line_edit->set_h_size_flags(Control::SIZE_EXPAND_FILL);
-	folder_line_edit->set_text(previous_folder_selection);
-	folder_line_edit->connect(SNAME("text_changed"), callable_mp(this, &FindInFilesDialog2::_on_folder_text_changed));
-	folder_line_edit->connect(SNAME("text_changed"), callable_mp(this, &FindInFilesDialog2::_set_changed).unbind(1));
-	files_filter_hbc->add_child(folder_line_edit);
+	directory_line_edit = memnew(LineEdit);
+	directory_line_edit->set_h_size_flags(Control::SIZE_EXPAND_FILL);
+	directory_line_edit->set_text(previous_folder_selection);
+	directory_line_edit->connect(SNAME("text_changed"), callable_mp(this, &FindInFilesDialog2::_on_folder_text_changed));
+	files_filter_hbc->add_child(directory_line_edit);
 
 	folder_dialog = memnew(FileDialog);
 	folder_dialog->set_file_mode(FileDialog::FILE_MODE_OPEN_DIR);
 	folder_dialog->connect(SNAME("dir_selected"), callable_mp(this, &FindInFilesDialog2::_on_folder_selected));
-	folder_dialog->connect(SNAME("dir_selected"), callable_mp(this, &FindInFilesDialog2::_set_changed).unbind(1));
 	folder_dialog->set_title(TTR("Select a folder"));
 	add_child(folder_dialog);
 
@@ -587,7 +580,6 @@ FindInFilesDialog2::FindInFilesDialog2() {
 	file_filter_chkbx = memnew(CheckBox);
 	file_filter_chkbx->set_pressed(true);
 	file_filter_chkbx->connect(SNAME("toggled"), callable_mp(this, &FindInFilesDialog2::_on_file_filter_toggled));
-	file_filter_chkbx->connect(SNAME("toggled"), callable_mp(this, &FindInFilesDialog2::_set_changed).unbind(1));
 	files_filter_hbc->add_child(file_filter_chkbx);
 
 	file_filter_line_edit = memnew(LineEdit);
@@ -595,13 +587,11 @@ FindInFilesDialog2::FindInFilesDialog2() {
 	file_filter_line_edit->set_text("*.gd,*.gdshader");
 	file_filter_line_edit->set_editable(file_filter_chkbx->is_pressed());
 	file_filter_line_edit->connect(SNAME("text_changed"), callable_mp(this, &FindInFilesDialog2::_run_search).unbind(1));
-	file_filter_line_edit->connect(SNAME("text_changed"), callable_mp(this, &FindInFilesDialog2::_set_changed).unbind(1));
 	files_filter_hbc->add_child(file_filter_line_edit);
 
 	recent_file_filters_btn = memnew(MenuButton);
 	recent_file_filters_btn->set_text("Recent Filters");
 	recent_file_filters_btn->get_popup()->connect(SNAME("index_pressed"), callable_mp(this, &FindInFilesDialog2::_on_recent_file_filter_selected));
-	recent_file_filters_btn->get_popup()->connect(SNAME("index_pressed"), callable_mp(this, &FindInFilesDialog2::_set_changed).unbind(1));
 	files_filter_hbc->add_child(recent_file_filters_btn);
 
 	// Status

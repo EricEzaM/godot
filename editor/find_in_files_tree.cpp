@@ -32,23 +32,15 @@
 
 #include "editor/editor_scale.h"
 #include "editor/editor_string_names.h"
-#include "editor/find_in_files_shared.h"
 #include "scene/theme/theme_db.h"
 
 void FindInFilesTree::_notification(int p_what) {
 	switch (p_what) {
-		case NOTIFICATION_ENTER_TREE: {
-			file_icon = get_editor_theme_icon(SNAME("File"));
-			folder_icon = get_editor_theme_icon(SNAME("Folder"));
-		} break;
 		case NOTIFICATION_READY: {
 			connect(SNAME("item_activated"), callable_mp(this, &FindInFilesTree::_on_result_activated));
 
-			if (dialog_mode) {
-				add_theme_font_override("font", get_theme_font(SNAME("source"), EditorStringName(EditorFonts)));
-				add_theme_font_size_override("font_size", get_theme_font_size(SNAME("source_size"), EditorStringName(EditorFonts)));
-			}
-
+			file_icon = get_editor_theme_icon(SNAME("File"));
+			folder_icon = get_editor_theme_icon(SNAME("Folder"));
 			folder_icon_color = get_theme_color(SNAME("folder_icon_color"), SNAME("FileDialog"));
 		} break;
 	}
@@ -65,7 +57,22 @@ void FindInFilesTree::select_first_non_root() const {
 	}
 }
 
-void FindInFilesTree::remake_tree() {
+void FindInFilesTree::select_by_result_id(const String &p_id) const {
+	TreeItem *item = get_root();
+	while (item) {
+		item = item->get_next_in_tree();
+
+		Array ids = item->get_meta("ids", Array());
+		for (int i = 0; i < ids.size(); ++i) {
+			if (ids[i] == p_id) {
+				item->select(0);
+				return;
+			}
+		}
+	}
+}
+
+void FindInFilesTree::_remake_tree() {
 	_remake_empty_tree_structure();
 
 	for (KeyValue<String, FindInFilesSearcher::FindResult> &element : result_id_map) {
@@ -158,7 +165,36 @@ bool FindInFilesTree::get_group_results_on_same_line() const {
 
 void FindInFilesTree::set_group_results_on_same_line(bool p_group) {
 	group_results_on_same_line = p_group;
-	remake_tree();
+	_remake_tree();
+}
+
+void FindInFilesTree::remove_item(TreeItem *p_item) {
+	if (p_item->get_tree() != this) {
+		return;
+	}
+
+	// First, try and select the next result item in the tree
+	TreeItem *next = p_item->get_next_in_tree();
+	while (next) {
+		if (next->has_meta("ids")) {
+			set_selected(next, 0);
+			break;
+		}
+
+		next = next->get_next_in_tree();
+	}
+
+	// Remove the item from its parent
+	TreeItem *parent = p_item->get_parent();
+	ERR_FAIL_COND_MSG(!parent, "Cannot remove item with no parent!");
+
+	parent->remove_child(p_item);
+	memdelete(p_item);
+
+	// Check if the parent is empty. If it is empty and non-root, remove it too.
+	if (parent->get_child_count() == 0 && get_root() != parent) {
+		remove_item(parent);
+	}
 }
 
 TreeItem *FindInFilesTree::_get_result_item_parent(const FindInFilesSearcher::FindResult &p_result) {

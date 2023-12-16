@@ -37,7 +37,6 @@
 
 class FindInFilesTree : public Tree {
 	GDCLASS(FindInFilesTree, Tree)
-
 	int item_character_limit = 100;
 
 	Ref<Texture2D> file_icon;
@@ -52,6 +51,7 @@ class FindInFilesTree : public Tree {
 	HashMap<String, TreeItem *> filesystem_items;
 	HashMap<String, FindInFilesSearcher::FindResult> result_id_map;
 
+	void _remake_tree();
 	void _remake_empty_tree_structure();
 
 	TreeItem *_get_result_item_parent(const FindInFilesSearcher::FindResult &p_result);
@@ -67,13 +67,15 @@ protected:
 
 public:
 	void reset();
-	void remake_tree();
 	void add_result(const FindInFilesSearcher::FindResult &p_result);
 
 	void select_first_non_root() const;
+	void select_by_result_id(const String &p_id) const;
 
 	bool get_group_results_on_same_line() const;
 	void set_group_results_on_same_line(bool p_group);
+
+	void remove_item(TreeItem *p_item);
 
 	FindInFilesTree(bool p_dialog_mode);
 };

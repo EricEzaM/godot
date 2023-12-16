@@ -3681,7 +3681,7 @@ void ScriptEditor::_on_find_in_files_requested(String text) {
 	if (!text.is_empty()) {
 		find_in_files_dialog->set_find_text(text);
 	}
-	find_in_files_dialog->set_dialog_mode(FindInFilesDialog2::FIND_MODE);
+	find_in_files_dialog->set_replace_mode(false);
 	find_in_files_dialog->popup_centered_ratio_xy(0.5, 0.65);
 }
 
@@ -3692,7 +3692,7 @@ void ScriptEditor::_on_replace_in_files_requested(String text) {
 	if (!text.is_empty()) {
 		find_in_files_dialog->set_find_text(text);
 	}
-	find_in_files_dialog->set_dialog_mode(FindInFilesDialog2::REPLACE_MODE);
+	find_in_files_dialog->set_replace_mode(true);
 	find_in_files_dialog->popup_centered_ratio_xy(0.5, 0.65);
 }
 

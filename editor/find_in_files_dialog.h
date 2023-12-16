@@ -34,6 +34,7 @@
 #include "editor/find_in_files_searcher.h"
 #include "scene/gui/dialogs.h"
 
+struct FindReplaceConfiguration;
 class FindInFilesTree;
 class TextureRect;
 class MenuButton;
@@ -45,15 +46,7 @@ class HBoxContainer;
 
 class FindInFilesDialog2 : public AcceptDialog {
 	GDCLASS(FindInFilesDialog2, AcceptDialog)
-public:
-	enum FindInFilesMode {
-		FIND_MODE,
-		REPLACE_MODE
-	};
-
-private:
-	FindInFilesMode mode = FIND_MODE;
-	bool has_changed = false;
+	bool replace_mode;
 	bool run_search_on_popup = true;
 	bool clear_results_on_next_update = false;
 
@@ -69,7 +62,7 @@ private:
 	HBoxContainer *replace_hbc;
 	LineEdit *replace_line_edit;
 
-	LineEdit *folder_line_edit;
+	LineEdit *directory_line_edit;
 	String previous_folder_selection = "res://";
 	FileDialog *folder_dialog;
 	LineEdit *file_filter_line_edit;
@@ -82,7 +75,6 @@ private:
 
 	FindInFilesTree *results;
 	FindInFilesFilePreview *file_preview;
-	Color invalid_result_color = Color(1, 0, 0);
 
 	Timer *update_poll_timer;
 	FindInFilesSearcher *searcher;
@@ -116,29 +108,25 @@ private:
 	void _do_replace_all();
 	void _update_replace_preview();
 
-	void _set_changed();
-
 protected:
 	void _notification(int p_what);
 
 	void custom_action(const String &) override;
 
 public:
-	FindInFilesMode get_dialog_mode() const;
-	void set_dialog_mode(FindInFilesMode p_mode);
+	bool is_replace_mode() const;
+	void set_replace_mode(bool p_replace_mode);
 
 	void shortcut_input(const Ref<InputEvent> &p_event) override;
-	void get_initial_search_data(FindInFilesSearcher::InputData &r_input_data, FindInFilesSearcher::Status &r_status);
+	void get_state(FindReplaceConfiguration &r_config, FindInFilesSearcher::Status &r_status) const;
 	// This method sets the initial state of the dialog, for use when "configuring" an existing search from the panel.
 	// It means that when the dialog is opened, it will be correctly configured and also have all the results from
 	// the previous search so it won't have to re-do the search if no parameters have changed.
-	void set_initial_search_data(const FindInFilesSearcher::InputData &p_input_data, const FindInFilesSearcher::Status &p_status);
+	void set_state(const FindReplaceConfiguration &p_config, const FindInFilesSearcher::Status &p_status);
 
 	void set_find_text(const String &p_text);
 
 	void set_run_search_on_popup(bool p_run);
-
-	bool has_configuration_changed_since_open() const { return has_changed; }
 
 	FindInFilesDialog2();
 };

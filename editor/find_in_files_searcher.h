@@ -38,6 +38,7 @@
 
 class RegEx;
 class ClassDB;
+struct FindConfiguration;
 
 class FindInFilesSearcher : public Object {
 	GDCLASS(FindInFilesSearcher, Object)
@@ -92,57 +93,23 @@ public:
 		Vector<FindResult> results;
 	};
 
-	struct InputData {
-		String text;
-		String directory;
-
-		String file_filter_string;
-		HashSet<String> allow_file_regex_strings;
-		HashSet<String> ignore_file_regex_strings;
-
-		int result_limit;
-		bool soft_limit;
-		bool match_case_sensitive;
-		bool match_whole_words;
-		bool match_use_regex;
-
-		InputData() {}
-
-		InputData(const String &p_text, const String &p_directory, const String &p_file_filter, const HashSet<String> &p_allow_file_regex_strings, const HashSet<String> &p_ignore_file_regex_strings,
-				int p_result_limit, bool p_soft_limit, bool p_case_sensitive, bool p_whole_words, bool p_use_regex) :
-				text(p_text),
-				directory(p_directory),
-				file_filter_string(p_file_filter),
-				allow_file_regex_strings(p_allow_file_regex_strings),
-				ignore_file_regex_strings(p_ignore_file_regex_strings),
-				result_limit(p_result_limit),
-				soft_limit(p_soft_limit),
-				match_case_sensitive(p_case_sensitive),
-				match_whole_words(p_whole_words),
-				match_use_regex(p_use_regex) {
-		}
-	};
-
 private:
-	bool is_cancelled;
+	bool is_cancelled = false;
 
 	Status status;
 	Thread worker_thread;
 
 	String text;
 	String directory;
+	String file_filter;
 
-	int result_limit;
-	bool soft_result_limit;
-	bool match_case_sensitive;
-	bool match_whole_words;
-	bool match_use_regex;
+	int result_limit = 0;
+	bool is_result_limit_soft = false;
+	bool match_case_sensitive = false;
+	bool match_whole_words = false;
+	bool match_use_regex = false;
 
-	String file_filter_string;
-	HashSet<String> allow_regex_strings;
-	HashSet<String> ignore_regex_strings;
-
-	bool soft_limit_continue;
+	bool soft_limit_continue = false;
 	Semaphore soft_limit_sem;
 
 	static void _thread_func(void *self);
@@ -165,10 +132,10 @@ protected:
 	static void _bind_methods();
 
 public:
-	// Batch input data as one structure, so that changes to any options only affect new searches,
+	// Batch configuration as one structure, so that changes to any options only affect new searches,
 	// not ongoing ones (if the user of this class does not immediately restart the search).
-	InputData get_input_data() const;
-	void set_input_data(const InputData &p_input_data);
+	FindConfiguration get_configuration() const;
+	void set_configuration(const FindConfiguration &p_config);
 
 	Status get_status() const;
 	void set_status(const Status &p_status);
@@ -188,9 +155,7 @@ public:
 
 	void set_directory(const String &p_directory);
 	void set_file_filter(const String &p_file_filter);
-	void set_file_filter(const HashSet<String> &p_allow_regex_strings, const HashSet<String> &p_ignore_regex_strings);
 
-	void set_result_limit(int p_limit, bool p_is_soft);
 	int get_result_limit() const;
 	int is_soft_result_limit() const;
 
@@ -205,7 +170,7 @@ public:
 
 	void release_soft_limit(bool p_continue_search);
 
-	FindInFilesSearcher();
+	FindInFilesSearcher(int p_result_limit, bool p_is_soft_limit);
 	~FindInFilesSearcher();
 };
 

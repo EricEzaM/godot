@@ -31,7 +31,8 @@
 #ifndef FIND_IN_FILES_PANEL_H
 #define FIND_IN_FILES_PANEL_H
 
-#include "editor/find_in_files_searcher.h"
+#include "find_in_files_searcher.h"
+#include "find_in_files_shared.h"
 #include "scene/gui/dialogs.h"
 
 class FindInFilesPanel2;
@@ -66,12 +67,16 @@ class FindInFilesPanelTab : public Control {
 	FindInFilesFilePreview *file_preview;
 
 	ConfirmationDialog *continue_confirm_dialog;
+	HBoxContainer *replace_actions_container;
+	Button *replace_button;
+	FindReplaceConfiguration current_dialog_configuration;
 
+	void _on_result_selected();
 	void _on_dialog_confirmed();
 	void _on_open_file_requested(const String &p_path, int p_line, int p_column);
+	void _do_replace_on_selected();
 
 	void _update_from_searcher();
-	void _update_file_preview();
 
 	void _soft_limit_continue_search();
 	void _soft_limit_cancel_search();
@@ -85,13 +90,12 @@ public:
 	void popup_configure();
 	void rerun_search();
 
-	FindInFilesPanelTab(const FindInFilesSearcher::InputData &p_input_data, const FindInFilesSearcher::Status &p_status);
+	FindInFilesPanelTab(const FindReplaceConfiguration &p_config, const FindInFilesSearcher::Status &p_status);
 	~FindInFilesPanelTab();
 };
 
 class FindInFilesPanel2 : public Control {
 	GDCLASS(FindInFilesPanel2, Control)
-
 	TabContainer *tabs;
 
 	FindInFilesPanelTab *configuring_tab = nullptr;
@@ -114,7 +118,6 @@ protected:
 	static void _bind_methods();
 
 public:
-	void update_search(const FindInFilesSearcher::InputData &p_input_data);
 	void add_tab(FindInFilesDialog2 *p_dialog);
 
 	FindInFilesPanel2();

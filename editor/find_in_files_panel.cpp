@@ -41,17 +41,48 @@
 #include "scene/gui/tab_container.h"
 #include "scene/gui/tree.h"
 
-void FindInFilesPanelTab::_on_dialog_confirmed() {
-	if (!dialog->has_configuration_changed_since_open()) {
+void FindInFilesPanelTab::_on_result_selected() {
+	const TreeItem *selected = results->get_selected();
+	if (!selected) {
+		replace_button->set_disabled(true);
+		file_preview->clear_file();
 		return;
 	}
 
-	FindInFilesSearcher::InputData input;
+	const Array ids = selected->get_meta("ids", Array());
+	if (ids.is_empty()) {
+		replace_button->set_disabled(true);
+		file_preview->clear_file();
+		return;
+	}
+
+	// All the ids will be for the same file and line, doesnt matter which one we get.
+	const String id = ids.front();
+	if (result_items.has(id)) {
+		const FindInFilesSearcher::FindResult r = result_items[id];
+		file_preview->open_file(r.path, r.start_line);
+		replace_button->set_disabled(false);
+	} else {
+		file_preview->clear_file();
+		replace_button->set_disabled(true);
+	}
+}
+
+void FindInFilesPanelTab::_on_dialog_confirmed() {
+	FindReplaceConfiguration config;
 	FindInFilesSearcher::Status status;
-	dialog->get_initial_search_data(input, status);
-	searcher->set_input_data(input);
-	// TODO result limit is also in ctor
-	searcher->set_result_limit(1000, true);
+	dialog->get_state(config, status);
+
+	if (config == current_dialog_configuration) {
+		return;
+	}
+	current_dialog_configuration = config;
+
+	searcher->set_configuration(config);
+
+	if (config.is_replace_mode) {
+		replace_actions_container->show();
+	}
 
 	_run_search();
 }
@@ -59,6 +90,26 @@ void FindInFilesPanelTab::_on_dialog_confirmed() {
 void FindInFilesPanelTab::_on_open_file_requested(const String &p_path, int p_line, int p_column) {
 	auto res = ScriptEditor::get_singleton()->open_file(p_path, true);
 	ScriptEditor::get_singleton()->edit(res, p_line, p_column);
+}
+
+void FindInFilesPanelTab::_do_replace_on_selected() {
+	TreeItem *selected = results->get_selected();
+	ERR_FAIL_COND_MSG(!selected, "Can't perform replace - nothing selected.");
+
+	const Array ids = selected->get_meta("ids");
+	ERR_FAIL_COND_MSG(ids.is_empty(), "Can't perform replace - selected item does not have 'ids' meta");
+
+	// When in replace mode, each item only has a single id in the array.
+	const FindInFilesSearcher::FindResult result = result_items.get(ids.front());
+	if (searcher->replace_match(result, current_dialog_configuration.replace_text)) {
+		_on_result_selected();
+
+		if (!searcher->is_result_valid(result)) {
+			results->remove_item(selected);
+		}
+
+		ScriptEditor::get_singleton()->reload_scripts();
+	}
 }
 
 void FindInFilesPanelTab::_update_from_searcher() {
@@ -81,29 +132,6 @@ void FindInFilesPanelTab::_update_from_searcher() {
 	}
 	if (status.finished) {
 		update_poll_timer->stop();
-	}
-}
-
-void FindInFilesPanelTab::_update_file_preview() {
-	const TreeItem *selected = results->get_selected();
-	if (!selected) {
-		file_preview->clear_file();
-		return;
-	}
-
-	const Array ids = selected->get_meta("ids", Array());
-	if (ids.is_empty()) {
-		file_preview->clear_file();
-		return;
-	}
-
-	// All the ids will be for the same file and line, doesnt matter which one we get.
-	const String id = ids.front();
-	if (result_items.has(id)) {
-		const FindInFilesSearcher::FindResult r = result_items[id];
-		file_preview->open_file(r.path, r.start_line);
-	} else {
-		file_preview->clear_file();
 	}
 }
 
@@ -167,16 +195,15 @@ void FindInFilesPanelTab::rerun_search() {
 	_run_search();
 }
 
-FindInFilesPanelTab::FindInFilesPanelTab(const FindInFilesSearcher::InputData &p_input_data, const FindInFilesSearcher::Status &p_status) {
+FindInFilesPanelTab::FindInFilesPanelTab(const FindReplaceConfiguration &p_config, const FindInFilesSearcher::Status &p_status) {
 	// TODO Soft Result Limit
-	const int result_limit = 1000;
-	searcher = memnew(FindInFilesSearcher);
-	searcher->set_input_data(p_input_data);
-	searcher->set_result_limit(result_limit, true);
+	constexpr int result_limit = 1000;
+	searcher = memnew(FindInFilesSearcher(result_limit, true));
+	searcher->set_configuration(p_config);
 
 	dialog = memnew(FindInFilesDialog2);
 	add_child(dialog);
-	dialog->set_initial_search_data(p_input_data, p_status);
+	dialog->set_state(p_config, p_status);
 	dialog->set_run_search_on_popup(false);
 	dialog->connect(SNAME("confirmed"), callable_mp(this, &FindInFilesPanelTab::_on_dialog_confirmed));
 
@@ -192,13 +219,32 @@ FindInFilesPanelTab::FindInFilesPanelTab(const FindInFilesSearcher::InputData &p
 	split->set_h_size_flags(SIZE_EXPAND_FILL);
 	add_child(split);
 
+	VBoxContainer *left_container = memnew(VBoxContainer);
+	left_container->set_h_size_flags(SIZE_EXPAND_FILL);
+	left_container->set_v_size_flags(SIZE_EXPAND_FILL);
+	left_container->set_stretch_ratio(0.5);
+	split->add_child(left_container);
+
 	results = memnew(FindInFilesTree(false));
-	results->set_stretch_ratio(0.5);
 	results->set_group_results_on_same_line(true);
-	results->connect(SNAME("item_selected"), callable_mp(this, &FindInFilesPanelTab::_update_file_preview));
+	results->connect(SNAME("item_selected"), callable_mp(this, &FindInFilesPanelTab::_on_result_selected));
 	// results->connect(SNAME("item_selected"), callable_mp(this, &FindInFilesPanelTab::_update_replace_preview));
 	results->connect(SNAME("open_file_requested"), callable_mp(this, &FindInFilesPanelTab::_on_open_file_requested));
-	split->add_child(results);
+	left_container->add_child(results);
+
+	replace_actions_container = memnew(HBoxContainer);
+	replace_actions_container->set_visible(p_config.is_replace_mode);
+	left_container->add_child(replace_actions_container);
+
+	replace_button = memnew(Button);
+	replace_button->set_text("Replace");
+	replace_button->set_disabled(true);
+	replace_button->connect(SNAME("pressed"), callable_mp(this, &FindInFilesPanelTab::_do_replace_on_selected));
+	replace_actions_container->add_child(replace_button);
+
+	Button *replace_all_button = memnew(Button);
+	replace_all_button->set_text("Replace All");
+	replace_actions_container->add_child(replace_all_button);
 
 	file_preview = memnew(FindInFilesFilePreview);
 	split->add_child(file_preview);
@@ -268,13 +314,17 @@ void FindInFilesPanel2::add_tab(FindInFilesDialog2 *p_dialog) {
 		return;
 	}
 
-	FindInFilesSearcher::InputData input;
+	FindReplaceConfiguration config;
 	FindInFilesSearcher::Status status;
-	p_dialog->get_initial_search_data(input, status);
+	p_dialog->get_state(config, status);
 
-	FindInFilesPanelTab *child = memnew(FindInFilesPanelTab(input, status));
+	FindInFilesPanelTab *child = memnew(FindInFilesPanelTab(config, status));
+
+	const String mode = config.is_replace_mode ? "Replace" : "Find";
+	const String replacement_suffix = config.is_replace_mode ? vformat(" with '%s'", config.replace_text) : "";
+
 	tabs->add_child(child);
-	tabs->set_tab_title(tabs->get_tab_count() - 1, vformat("Find '%s'", input.text));
+	tabs->set_tab_title(tabs->get_tab_count() - 1, vformat("%s '%s'%s", mode, config.text, replacement_suffix));
 	tabs->set_tab_button_icon(tabs->get_tab_count() - 1, get_editor_theme_icon(SNAME("Close")));
 	tabs->set_current_tab(tabs->get_tab_idx_from_control(child));
 

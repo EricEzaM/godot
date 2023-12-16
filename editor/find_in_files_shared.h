@@ -31,25 +31,69 @@
 #ifndef FIND_IN_FILES_SHARED_H
 #define FIND_IN_FILES_SHARED_H
 
-#include "find_in_files_searcher.h"
 #include "scene/gui/box_container.h"
-#include "scene/gui/panel.h"
 
 class ScriptEditorBase;
 class PanelContainer;
-struct Rect2;
 class TreeItem;
 class Tree;
 
-class FindInFilesContainerBase : public Control {
-	GDCLASS(FindInFilesContainerBase, Control)
+struct FindConfiguration {
+	String text;
+
+	String file_filter;
+	String directory;
+
+	bool match_case_sensitive;
+	bool match_whole_words;
+	bool match_use_regex;
+
+	FindConfiguration() {
+	}
+
+	FindConfiguration(const String &p_text, const String &p_directory, const String &p_file_filter, bool p_case_sensitive, bool p_whole_words, bool p_use_regex) :
+			text(p_text),
+			file_filter(p_file_filter),
+			directory(p_directory),
+			match_case_sensitive(p_case_sensitive),
+			match_whole_words(p_whole_words),
+			match_use_regex(p_use_regex) {
+	}
+};
+
+struct FindReplaceConfiguration : FindConfiguration {
+	bool is_replace_mode;
+	String replace_text;
+
+	FindReplaceConfiguration() {
+	}
+
+	FindReplaceConfiguration(const FindConfiguration &p_find_configuration, bool p_is_replace_mode, const String &p_replace_text) :
+			FindConfiguration(p_find_configuration),
+			is_replace_mode(p_is_replace_mode),
+			replace_text(p_replace_text) {
+	}
+
+	FindReplaceConfiguration(const String &p_text, const String &p_folder_filter, const String &p_file_filter, bool p_case_sensitive, bool p_whole_words, bool p_use_regex, bool p_is_replace_mode, const String &p_replace_text) :
+			FindConfiguration(p_text, p_folder_filter, p_file_filter, p_case_sensitive, p_whole_words, p_use_regex),
+			is_replace_mode(p_is_replace_mode),
+			replace_text(p_replace_text) {
+	}
+
+	bool operator==(const FindReplaceConfiguration &p_other) const {
+		return text == p_other.text &&
+				file_filter == p_other.file_filter &&
+				directory == p_other.directory &&
+				match_case_sensitive == p_other.match_case_sensitive &&
+				match_whole_words == p_other.match_whole_words &&
+				match_use_regex == p_other.match_use_regex &&
+				is_replace_mode == p_other.is_replace_mode &&
+				replace_text == p_other.replace_text;
+	}
 };
 
 class FindInFilesFilePreview : public VBoxContainer {
 	GDCLASS(FindInFilesFilePreview, VBoxContainer)
-
-	String current_file;
-	int current_line = -1;
 
 	ScriptEditorBase *editor = nullptr;
 
