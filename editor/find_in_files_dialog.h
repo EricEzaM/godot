@@ -47,11 +47,9 @@ class HBoxContainer;
 class FindInFilesDialog2 : public AcceptDialog {
 	GDCLASS(FindInFilesDialog2, AcceptDialog)
 	bool replace_mode;
-	bool run_search_on_popup = true;
 	bool clear_results_on_next_update = false;
 
 	Vector<String> recent_filters; // Start = oldest, End = newest
-	HashMap<String, FindInFilesSearcher::FindResult> result_items;
 
 	TextureRect *search_validation;
 	LineEdit *search_line_edit;
@@ -83,7 +81,6 @@ class FindInFilesDialog2 : public AcceptDialog {
 	Button *replace_all_dialog_btn = nullptr;
 
 	void _run_search();
-	void _clear_results();
 
 	void _update_from_searcher();
 	void _select_first_result();
@@ -125,8 +122,6 @@ public:
 	void set_state(const FindReplaceConfiguration &p_config, const FindInFilesSearcher::Status &p_status);
 
 	void set_find_text(const String &p_text);
-
-	void set_run_search_on_popup(bool p_run);
 
 	FindInFilesDialog2();
 };

@@ -104,19 +104,15 @@ void FindInFilesDialog2::_on_search_gui_input(const Ref<InputEvent> &p_input) {
 
 void FindInFilesDialog2::_update_file_preview() {
 	const TreeItem *selected = results->get_selected();
-	if (!selected) {
+	const Vector<FindInFilesSearcher::FindResult> selected_results = results->get_find_results_for_item(selected);
+
+	if (selected_results.is_empty()) {
 		file_preview->clear_file();
 		return;
 	}
 
-	const Array &ids = selected->get_meta("ids");
-	if (ids.is_empty()) {
-		file_preview->clear_file();
-		return;
-	}
-
-	const FindInFilesSearcher::FindResult r = result_items.get(ids.front());
-	file_preview->open_file(r.path, r.start_line);
+	const FindInFilesSearcher::FindResult &result = selected_results[0];
+	file_preview->open_file(result.file_path, result.start_line);
 }
 
 void FindInFilesDialog2::_on_open_file_requested(const String &p_path, int p_line, int p_column) {
@@ -186,7 +182,7 @@ void FindInFilesDialog2::_run_search() {
 	// If no search, clear everything.
 	if (search_string.is_empty()) {
 		status_display->set_text(TTR("Type a search query to find in files."));
-		_clear_results();
+		results->reset();
 		_update_file_preview();
 		return;
 	}
@@ -206,14 +202,9 @@ void FindInFilesDialog2::_run_search() {
 	update_poll_timer->start();
 }
 
-void FindInFilesDialog2::_clear_results() {
-	results->reset();
-	result_items.clear();
-}
-
 void FindInFilesDialog2::_update_from_searcher() {
 	if (clear_results_on_next_update) {
-		_clear_results();
+		results->reset();
 		clear_results_on_next_update = false;
 	}
 
@@ -221,13 +212,12 @@ void FindInFilesDialog2::_update_from_searcher() {
 	status_display->set_text(vformat("%s%s matches in %s%s files", status.results.size(), status.limit_reached ? "+" : "", status.files_with_matches, status.limit_reached ? "+" : ""));
 
 	// We do not currently have any results and results are about to be added, so on the next frame try select first result
-	if (result_items.is_empty() && !status.results.is_empty()) {
+	if (results->get_root()->get_child_count() > 0 && !status.results.is_empty()) {
 		callable_mp(this, &FindInFilesDialog2::_select_first_result).call_deferred();
 	}
 
 	for (const FindInFilesSearcher::FindResult &r : status.results) {
 		results->add_result(r);
-		result_items[r.id] = r;
 	}
 
 	if (status.finished) {
@@ -317,22 +307,25 @@ void FindInFilesDialog2::_do_replace_on_selected() {
 		return;
 	}
 
-	TreeItem *selected = results->get_selected();
-	ERR_FAIL_COND_MSG(!selected, "Can't perform replace - nothing selected.");
+	const TreeItem *selected = results->get_selected();
+	const Vector<FindInFilesSearcher::FindResult> selected_results = results->get_find_results_for_item(selected);
 
-	const Array ids = selected->get_meta("ids");
-	ERR_FAIL_COND_MSG(ids.is_empty(), "Can't perform replace - selected item does not have 'ids' meta");
+	if (selected_results.is_empty()) {
+		return;
+	}
 
 	// When in replace mode, each item only has a single id in the array.
-	const FindInFilesSearcher::FindResult result = result_items.get(ids.front());
+	const FindInFilesSearcher::FindResult &result = selected_results[0];
 	if (searcher->replace_match(result, replace_line_edit->get_text())) {
 		_update_file_preview();
 
-		if (!searcher->is_result_valid(result)) {
-			results->remove_item(selected);
-		}
-
+		// results->remove_item(selected);
 		ScriptEditor::get_singleton()->reload_scripts();
+
+		// Re-search the changed file for matches
+		Vector<FindInFilesSearcher::FindResult> new_find_results;
+		searcher->search_file(result.file_path, new_find_results);
+		results->update_file_items(result.file_path, new_find_results);
 	}
 }
 
@@ -350,13 +343,13 @@ void FindInFilesDialog2::_update_replace_preview() {
 	}
 
 	const TreeItem *selected = results->get_selected();
-	ERR_FAIL_COND_MSG(!selected, "Can't update replace preview - nothing selected.");
+	const Vector<FindInFilesSearcher::FindResult> selected_results = results->get_find_results_for_item(selected);
 
-	const Array ids = selected->get_meta("ids");
-	ERR_FAIL_COND_MSG(ids.is_empty(), "Can't update replace preview - selected does not have 'ids' meta");
+	if (selected_results.is_empty()) {
+		return;
+	}
 
-	const FindInFilesSearcher::FindResult result = result_items.get(ids.front());
-	const String preview = searcher->get_replace_match_preview(result, replace_line_edit->get_text());
+	const String preview = searcher->get_replace_match_preview(selected_results[0], replace_line_edit->get_text());
 
 	replace_preview->set_text(preview);
 }
@@ -374,19 +367,8 @@ void FindInFilesDialog2::_notification(int p_what) {
 				search_line_edit->grab_focus();
 				search_line_edit->select_all();
 
-				// This code path gets executed if search text is set before popup (e.g. highlight some text then press the find in files shortcut)
-				const bool text_changed_since_last_search = search_line_edit->get_text() != searcher->get_search_text();
-				if (run_search_on_popup && text_changed_since_last_search) {
-					_clear_results();
-					_run_search();
-				}
-
-				// This code path is executed when opening the dialog from the results panel, to configure an existing search.
-				// We don't automatically re-run the search, and if the search query is not empty then we just populate based on the existing
-				// searcher data.
-				if (!run_search_on_popup && !searcher->get_search_text().is_empty()) {
-					_update_from_searcher();
-				}
+				results->reset();
+				_run_search();
 			} else {
 				// TODO this will not sync between other dialogs, the recent filters might need to be static?
 				_save_recent_filters(false);
@@ -447,10 +429,6 @@ void FindInFilesDialog2::set_replace_mode(bool p_mode) {
 
 void FindInFilesDialog2::set_find_text(const String &p_text) {
 	search_line_edit->set_text(p_text);
-}
-
-void FindInFilesDialog2::set_run_search_on_popup(bool p_run) {
-	run_search_on_popup = p_run;
 }
 
 void FindInFilesDialog2::get_state(FindReplaceConfiguration &r_config, FindInFilesSearcher::Status &r_status) const {

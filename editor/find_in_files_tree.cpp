@@ -80,16 +80,16 @@ void FindInFilesTree::_remake_tree() {
 	}
 }
 
-void FindInFilesTree::add_result(const FindInFilesSearcher::FindResult &p_result) {
+TreeItem *FindInFilesTree::add_result(const FindInFilesSearcher::FindResult &p_result) {
 	if (result_id_map.has(p_result.id)) {
-		return;
+		return nullptr;
 	}
 
 	result_id_map[p_result.id] = p_result;
-	_create_result_item(p_result, p_result.id);
+	return _create_result_item(p_result, p_result.id);
 }
 
-void FindInFilesTree::_create_result_item(const FindInFilesSearcher::FindResult &p_result, const String &p_result_id) {
+TreeItem *FindInFilesTree::_create_result_item(const FindInFilesSearcher::FindResult &p_result, const String &p_result_id) {
 	// Get the parent item on which the result item would be made a child
 	TreeItem *parent = _get_result_item_parent(p_result);
 	if (!parent) {
@@ -101,7 +101,7 @@ void FindInFilesTree::_create_result_item(const FindInFilesSearcher::FindResult 
 		const TreeItem *result_on_same_line = nullptr;
 		for (int i = 0; i < parent->get_child_count(); ++i) {
 			const TreeItem *search_result_item = parent->get_child(i);
-			if ((int)search_result_item->get_meta("line") == p_result.start_line && (String)search_result_item->get_meta("path") == p_result.path) {
+			if ((int)search_result_item->get_meta("line") == p_result.start_line && (String)search_result_item->get_meta("path") == p_result.file_path) {
 				result_on_same_line = search_result_item;
 				break;
 			}
@@ -111,9 +111,9 @@ void FindInFilesTree::_create_result_item(const FindInFilesSearcher::FindResult 
 		// Add this result id to the list of results that tree item represents.
 		if (result_on_same_line) {
 			Array ids = result_on_same_line->get_meta("ids", Array());
-			ERR_FAIL_COND_MSG(ids.is_empty(), "Existsing result had array size of zero, something went wrong!");
+			ERR_FAIL_COND_V_MSG(ids.is_empty(), nullptr, "Existsing result item had no results linked to it, something went wrong!");
 			ids.push_back(p_result_id);
-			return;
+			return nullptr;
 		}
 	}
 
@@ -143,20 +143,22 @@ void FindInFilesTree::_create_result_item(const FindInFilesSearcher::FindResult 
 	if (dialog_mode) {
 		item->set_custom_font_size(1, get_theme_font_size(SNAME("font_size")) * 0.8);
 		item->set_custom_color(1, secondary_font_color);
-		item->set_text(1, p_result.path.get_file());
+		item->set_text(1, p_result.file_path.get_file());
 		item->set_text_alignment(1, HORIZONTAL_ALIGNMENT_RIGHT);
 	}
-	item->set_metadata(0, p_result.path);
+	item->set_metadata(0, p_result.file_path);
 
 	Array ids = Array();
 	ids.push_back(p_result_id);
 	item->set_meta("ids", ids);
 	item->set_meta("trim_count", p_result.line_begin_string.size() - trimmed_text.size());
 	item->set_meta("display_text_start_column", text_start_column);
-	item->set_meta("path", p_result.path);
+	item->set_meta("path", p_result.file_path);
 	item->set_meta("line", p_result.start_line);
 	item->set_meta("column", p_result.start_col);
 	item->set_custom_draw(0, this, "_draw_result_text");
+
+	return item;
 }
 
 bool FindInFilesTree::get_group_results_on_same_line() const {
@@ -168,7 +170,7 @@ void FindInFilesTree::set_group_results_on_same_line(bool p_group) {
 	_remake_tree();
 }
 
-void FindInFilesTree::remove_item(TreeItem *p_item) {
+void FindInFilesTree::remove_item(TreeItem *p_item, bool p_remove_parent_if_empty) {
 	if (p_item->get_tree() != this) {
 		return;
 	}
@@ -184,6 +186,11 @@ void FindInFilesTree::remove_item(TreeItem *p_item) {
 		next = next->get_next_in_tree();
 	}
 
+	Array ids = p_item->get_meta("ids", Array());
+	for (int i = 0; i < ids.size(); ++i) {
+		result_id_map.erase(ids[i]);
+	}
+
 	// Remove the item from its parent
 	TreeItem *parent = p_item->get_parent();
 	ERR_FAIL_COND_MSG(!parent, "Cannot remove item with no parent!");
@@ -197,13 +204,80 @@ void FindInFilesTree::remove_item(TreeItem *p_item) {
 	}
 }
 
+void FindInFilesTree::update_file_items(const String &p_file, const Vector<FindInFilesSearcher::FindResult> &p_new_items) {
+	TreeItem *next_item = get_root();
+
+	Vector<TreeItem *> items_to_remove;
+	while (next_item) {
+		TreeItem *current_item = next_item;
+		next_item = next_item->get_next_in_tree();
+
+		bool is_for_file = false;
+		Vector<FindInFilesSearcher::FindResult> find_results = get_find_results_for_item(current_item);
+		for (const FindInFilesSearcher::FindResult &find_result : find_results) {
+			if (find_result.file_path == p_file) {
+				is_for_file = true;
+				break;
+			}
+		}
+
+		if (!is_for_file) {
+			continue;
+		}
+
+		items_to_remove.push_back(current_item);
+	}
+
+	TreeItem *prev_sibling = nullptr;
+	if (!items_to_remove.is_empty()) {
+		prev_sibling = items_to_remove[0]->get_prev();
+	}
+
+	for (TreeItem *to_remove : items_to_remove) {
+		remove_item(to_remove, p_new_items.is_empty());
+	}
+
+	TreeItem *previous_added_result = nullptr;
+	for (const FindInFilesSearcher::FindResult &to_add : p_new_items) {
+		TreeItem *result = add_result(to_add);
+
+		if (previous_added_result) {
+			result->move_after(previous_added_result);
+		} else if (prev_sibling) {
+			result->move_after(prev_sibling);
+		}
+
+		previous_added_result = result;
+	}
+}
+
+Vector<FindInFilesSearcher::FindResult> FindInFilesTree::get_find_results_for_item(const TreeItem *p_item) {
+	Vector<FindInFilesSearcher::FindResult> ret;
+
+	if (!p_item) {
+		return ret;
+	}
+
+	Array ids = p_item->get_meta("ids", Array());
+	if (ids.is_empty()) {
+		return ret;
+	}
+
+	for (int i = 0; i < ids.size(); ++i) {
+		ERR_FAIL_COND_V_MSG(!result_id_map.has(ids[i]), ret, vformat("Map of result ids to results does not contain entry for '%s'", ids[i]));
+		ret.push_back(result_id_map.get(ids[i]));
+	}
+
+	return ret;
+}
+
 TreeItem *FindInFilesTree::_get_result_item_parent(const FindInFilesSearcher::FindResult &p_result) {
 	if (dialog_mode) {
 		return nullptr;
 	}
 
 	// Grouping by directory and file, parent for the item is the tree item representing the file.
-	String path_no_res = p_result.path.substr(6); // The path without res://
+	String path_no_res = p_result.file_path.substr(6); // The path without res://
 	const int slice_count = path_no_res.get_slice_count("/");
 	String base_path = "";
 
@@ -221,7 +295,7 @@ TreeItem *FindInFilesTree::_get_result_item_parent(const FindInFilesSearcher::Fi
 			// If it's the last slice, it's the file, otherwise its a folder.
 			if (i == slice_count - 1) {
 				item->set_icon(0, file_icon);
-				item->set_tooltip_text(0, p_result.path);
+				item->set_tooltip_text(0, p_result.file_path);
 			} else {
 				item->set_icon(0, folder_icon);
 				item->set_icon_modulate(0, folder_icon_color);

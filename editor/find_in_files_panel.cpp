@@ -60,7 +60,7 @@ void FindInFilesPanelTab::_on_result_selected() {
 	const String id = ids.front();
 	if (result_items.has(id)) {
 		const FindInFilesSearcher::FindResult r = result_items[id];
-		file_preview->open_file(r.path, r.start_line);
+		file_preview->open_file(r.file_path, r.start_line);
 		replace_button->set_disabled(false);
 	} else {
 		file_preview->clear_file();
@@ -96,8 +96,8 @@ void FindInFilesPanelTab::_do_replace_on_selected() {
 	TreeItem *selected = results->get_selected();
 	ERR_FAIL_COND_MSG(!selected, "Can't perform replace - nothing selected.");
 
-	const Array ids = selected->get_meta("ids");
-	ERR_FAIL_COND_MSG(ids.is_empty(), "Can't perform replace - selected item does not have 'ids' meta");
+	const Array ids = selected->get_meta("ids", Array());
+	ERR_FAIL_COND_MSG(ids.is_empty(), "Can't perform replace - selected item does not have any linked results");
 
 	// When in replace mode, each item only has a single id in the array.
 	const FindInFilesSearcher::FindResult result = result_items.get(ids.front());
@@ -204,7 +204,6 @@ FindInFilesPanelTab::FindInFilesPanelTab(const FindReplaceConfiguration &p_confi
 	dialog = memnew(FindInFilesDialog2);
 	add_child(dialog);
 	dialog->set_state(p_config, p_status);
-	dialog->set_run_search_on_popup(false);
 	dialog->connect(SNAME("confirmed"), callable_mp(this, &FindInFilesPanelTab::_on_dialog_confirmed));
 
 	update_poll_timer = memnew(Timer);

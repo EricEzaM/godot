@@ -48,7 +48,7 @@ public:
 	struct FindResult {
 		String id = "";
 
-		String path = "";
+		String file_path = "";
 		String line_begin_string = "";
 
 		int start_line = 0;
@@ -64,7 +64,7 @@ public:
 
 		FindResult(const String &p_path, const String &p_line_string, int p_start_line, int p_start_col, int p_end_line, int p_end_col, int p_start_in_file, int p_end_in_file) :
 				id(vformat("%s_%s_%s_%s_%s", p_path, p_start_line, p_start_col, p_end_line, p_end_col)),
-				path(p_path),
+				file_path(p_path),
 				line_begin_string(p_line_string),
 				start_line(p_start_line),
 				start_col(p_start_col),
@@ -75,8 +75,7 @@ public:
 		}
 
 		bool operator==(const FindResult &p_other) const {
-			return path == p_other.path &&
-					line_begin_string == p_other.line_begin_string &&
+			return file_path == p_other.file_path &&
 					start_line == p_other.start_line &&
 					start_col == p_other.start_col &&
 					end_line == p_other.end_line &&
@@ -115,8 +114,8 @@ private:
 	static void _thread_func(void *self);
 	void _thread_process();
 
-	void _thread_get_files_from_dir(const String &p_dir_path, const Vector<Ref<RegEx>> &p_allow_regex, const Vector<Ref<RegEx>> &p_ignore_regex, PackedStringArray &r_filepaths);
-	int _thread_get_matches_from_file(const String &p_path, Vector<FindResult> &p_results, const Ref<RegEx> &p_regex) const;
+	void _get_files_from_dir(const String &p_dir_path, const Vector<Ref<RegEx>> &p_allow_regex, const Vector<Ref<RegEx>> &p_ignore_regex, PackedStringArray &r_filepaths);
+	int _get_matches_from_file(const String &p_path, const Ref<RegEx> &p_regex, Vector<FindResult> &r_results) const;
 
 	void _update_status(bool p_finished, int p_files_searched, int p_files_with_matches, int p_limit_reached, bool p_soft_limit, const Vector<FindResult> &p_results = Vector<FindResult>());
 
@@ -147,6 +146,8 @@ public:
 
 	void start();
 	void stop();
+
+	int search_file(const String &p_file, Vector<FindResult> &r_results) const;
 
 	bool is_valid(String &r_message) const;
 

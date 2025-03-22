@@ -87,7 +87,7 @@ void FindInFilesSearcher::_thread_process() {
 		return;
 	}
 
-	_thread_get_files_from_dir(input.directory, allow_regexs, ignore_regexs, filepaths);
+	_get_files_from_dir(input.directory, allow_regexs, ignore_regexs, filepaths);
 
 	if (_is_cancelled()) {
 		return;
@@ -95,7 +95,7 @@ void FindInFilesSearcher::_thread_process() {
 
 	// Create regex to use in searching.
 	Ref<RegEx> regex = _get_regex(input.text, input.match_use_regex, input.match_case_sensitive, input.match_whole_words);
-	ERR_FAIL_COND_MSG(regex.is_null() || !regex->is_valid(), "Regular expression for search is invalid");
+	ERR_FAIL_COND_MSG(regex.is_null() || !regex->is_valid(), "Regular expression for search is invalid_wa_zerv_zerv");
 
 	// Search in files from dir
 	Vector<FindResult> results;
@@ -107,7 +107,7 @@ void FindInFilesSearcher::_thread_process() {
 			break;
 		}
 
-		int matches_from_file = _thread_get_matches_from_file(filepath, results, regex);
+		int matches_from_file = _get_matches_from_file(filepath, regex, results);
 		searched++;
 		searched_with_matches += matches_from_file > 0 ? 1 : 0;
 
@@ -135,7 +135,7 @@ void FindInFilesSearcher::_thread_process() {
 	_update_status(true, searched, searched_with_matches, limit_reached, is_result_limit_soft, results);
 }
 
-void FindInFilesSearcher::_thread_get_files_from_dir(const String &p_dir_path, const Vector<Ref<RegEx>> &p_allow_regex, const Vector<Ref<RegEx>> &p_ignore_regex, PackedStringArray &r_filepaths) {
+void FindInFilesSearcher::_get_files_from_dir(const String &p_dir_path, const Vector<Ref<RegEx>> &p_allow_regex, const Vector<Ref<RegEx>> &p_ignore_regex, PackedStringArray &r_filepaths) {
 	Ref<DirAccess> dir = DirAccess::open(p_dir_path);
 
 	if (dir.is_null()) {
@@ -206,12 +206,12 @@ void FindInFilesSearcher::_thread_get_files_from_dir(const String &p_dir_path, c
 	r_filepaths.append_array(dir_files);
 
 	for (const String &dir_path : dir_subdirs) {
-		_thread_get_files_from_dir(dir_path, p_allow_regex, p_ignore_regex, r_filepaths);
+		_get_files_from_dir(dir_path, p_allow_regex, p_ignore_regex, r_filepaths);
 	}
 }
 
-int FindInFilesSearcher::_thread_get_matches_from_file(const String &p_path, Vector<FindResult> &p_results, const Ref<RegEx> &p_regex) const {
-	Ref<FileAccess> fa = FileAccess::open(p_path, FileAccess::ModeFlags::READ);
+int FindInFilesSearcher::_get_matches_from_file(const String &p_path, const Ref<RegEx> &p_regex, Vector<FindResult> &r_results) const {
+	const Ref<FileAccess> fa = FileAccess::open(p_path, FileAccess::ModeFlags::READ);
 
 	if (fa.is_null()) {
 		return 0;
@@ -247,7 +247,7 @@ int FindInFilesSearcher::_thread_get_matches_from_file(const String &p_path, Vec
 		int end_line_start_idx = file_text.rfindn("\n", match_end_idx - 1) + 1;
 		int end_col = match_end_idx - end_line_start_idx;
 
-		p_results.push_back(FindResult(p_path, lines[start_line], start_line, start_col, end_line, end_col, match_start_idx, match_end_idx));
+		r_results.push_back(FindResult(p_path, lines[start_line], start_line, start_col, end_line, end_col, match_start_idx, match_end_idx));
 	}
 
 	return matches.size();
@@ -301,7 +301,7 @@ bool FindInFilesSearcher::_is_result_valid(const FindResult &p_result, const Ref
 	ERR_FAIL_COND_V_MSG(p_regex.is_null() || !p_regex->is_valid(), false, "Regular expression for search is invalid");
 
 	Vector<FindResult> file_results;
-	_thread_get_matches_from_file(p_result.path, file_results, p_regex);
+	_get_matches_from_file(p_result.file_path, p_regex, file_results);
 
 	bool result_still_valid = false;
 	for (const FindResult &file_result : file_results) {
@@ -388,12 +388,12 @@ String FindInFilesSearcher::get_replace_match_preview(const FindResult &p_result
 	ERR_FAIL_COND_V_MSG(regex.is_null() || !regex->is_valid(), String(), "Regular expression for search is invalid");
 
 	if (!_is_result_valid(p_result, regex)) {
-		print_verbose(vformat("Occurrence no longer matches, replace will be ignored in %s: line %s, col %s", p_result.path, p_result.start_line, p_result.start_col));
+		print_verbose(vformat("Occurrence no longer matches, replace will be ignored in %s: line %s, col %s", p_result.file_path, p_result.start_line, p_result.start_col));
 		return String();
 	}
 
-	Ref<FileAccess> f = FileAccess::open(p_result.path, FileAccess::READ);
-	ERR_FAIL_COND_V_MSG(f.is_null(), String(), vformat("Cannot open file from path '%s'.", p_result.path));
+	Ref<FileAccess> f = FileAccess::open(p_result.file_path, FileAccess::READ);
+	ERR_FAIL_COND_V_MSG(f.is_null(), String(), vformat("Cannot open file from path '%s'.", p_result.file_path));
 
 	const String file_text = f->get_as_text(true);
 	const String to_replace = file_text.substr(p_result.start_in_file, p_result.end_in_file - p_result.start_in_file);
@@ -409,22 +409,23 @@ bool FindInFilesSearcher::replace_match(const FindResult &p_result, const String
 	ERR_FAIL_COND_V_MSG(regex.is_null() || !regex->is_valid(), false, "Regular expression for search is invalid");
 
 	if (!_is_result_valid(p_result, regex)) {
-		print_verbose(vformat("Occurrence no longer matches, replace will be ignored in %s: line %s, col %s", p_result.path, p_result.start_line, p_result.start_col));
+		print_verbose(vformat("Occurrence no longer matches, replace will be ignored in %s: line %s, col %s", p_result.file_path, p_result.start_line, p_result.start_col));
 		return false;
 	}
 
 	// Result is still valid, let's replace.
-	Ref<FileAccess> f = FileAccess::open(p_result.path, FileAccess::READ);
-	ERR_FAIL_COND_V_MSG(f.is_null(), false, vformat("Cannot open file from path '%s' for reading.", p_result.path));
+	Ref<FileAccess> f = FileAccess::open(p_result.file_path, FileAccess::READ);
+	ERR_FAIL_COND_V_MSG(f.is_null(), false, vformat("Cannot open file from path '%s' for reading.", p_result.file_path));
 	const String file_text = f->get_as_text(true);
-	f = nullptr;
+	f.unref();
 
 	const String new_text = regex->sub(file_text, p_replacement, false, p_result.start_in_file);
-	// Technically not always a failure, but this is necessary in case the sub fails
-	ERR_FAIL_COND_V_MSG(new_text.is_empty(), false, vformat("Replace failed on path '%s' because resulting file would be empty (likely due to RegEx replacement error)", p_result.path));
+	// Technically not always a failure as it is possible to replace the contents of the file with an empty string,
+	// but since sub() returns an empty string on failure, we must perform this check.
+	ERR_FAIL_COND_V_MSG(new_text.is_empty(), false, vformat("Replace failed on file '%s' - check the regular expression and replacement inputs.", p_result.file_path));
 
-	f = FileAccess::open(p_result.path, FileAccess::WRITE);
-	ERR_FAIL_COND_V_MSG(f.is_null(), false, vformat("Cannot open file from path '%s' for writing.", p_result.path));
+	f = FileAccess::open(p_result.file_path, FileAccess::WRITE);
+	ERR_FAIL_COND_V_MSG(f.is_null(), false, vformat("Cannot open file '%s' for writing.", p_result.file_path));
 	f->store_string(new_text);
 	return true;
 }
@@ -457,6 +458,10 @@ void FindInFilesSearcher::stop() {
 
 	// Should be near-immediate as long as _is_cancelled() is checked often in the worker thread.
 	worker_thread.wait_to_finish();
+}
+
+int FindInFilesSearcher::search_file(const String &p_file, Vector<FindResult> &r_results) const {
+	return _get_matches_from_file(p_file, _get_regex(text, match_use_regex, match_case_sensitive, match_whole_words), r_results);
 }
 
 bool FindInFilesSearcher::is_valid(String &r_message) const {

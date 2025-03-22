@@ -59,7 +59,7 @@ class FindInFilesTree : public Tree {
 	void _draw_find_result_tree_item(const TreeItem *p_item, Rect2 p_rect, List<FindInFilesSearcher::FindResult> *p_results);
 
 	void _on_result_activated();
-	void _create_result_item(const FindInFilesSearcher::FindResult &p_result, const String &p_result_id);
+	TreeItem *_create_result_item(const FindInFilesSearcher::FindResult &p_result, const String &p_result_id);
 
 protected:
 	void _notification(int p_what);
@@ -67,7 +67,7 @@ protected:
 
 public:
 	void reset();
-	void add_result(const FindInFilesSearcher::FindResult &p_result);
+	TreeItem *add_result(const FindInFilesSearcher::FindResult &p_result);
 
 	void select_first_non_root() const;
 	void select_by_result_id(const String &p_id) const;
@@ -75,7 +75,10 @@ public:
 	bool get_group_results_on_same_line() const;
 	void set_group_results_on_same_line(bool p_group);
 
-	void remove_item(TreeItem *p_item);
+	void remove_item(TreeItem *p_item, bool p_remove_parent_if_empty = true);
+	void update_file_items(const String &p_file, const Vector<FindInFilesSearcher::FindResult> &p_new_items);
+
+	Vector<FindInFilesSearcher::FindResult> get_find_results_for_item(const TreeItem *p_item);
 
 	FindInFilesTree(bool p_dialog_mode);
 };
